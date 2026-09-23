@@ -46,12 +46,11 @@ fn serialize_bytes<S>(bytes: &Bytes, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    // IPC contract expects string for dlq.log
     if let Ok(s) = std::str::from_utf8(bytes) {
-        serializer.serialize_str(s)
+        serializer.serialize_str(&format!("utf8:{}", s))
     } else {
         use base64::Engine;
-        serializer.serialize_str(&base64::engine::general_purpose::STANDARD.encode(bytes))
+        serializer.serialize_str(&format!("b64:{}", base64::engine::general_purpose::STANDARD.encode(bytes)))
     }
 }
 
@@ -60,11 +59,15 @@ where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    use base64::Engine;
-    // Attempt to decode as base64 first. If it fails, it was likely serialized as plain UTF-8.
-    match base64::engine::general_purpose::STANDARD.decode(&s) {
-        Ok(decoded) => Ok(Bytes::from(decoded)),
-        Err(_) => Ok(Bytes::from(s.into_bytes())),
+    if let Some(utf8_str) = s.strip_prefix("utf8:") {
+        Ok(Bytes::from(utf8_str.to_string().into_bytes()))
+    } else if let Some(b64_str) = s.strip_prefix("b64:") {
+        use base64::Engine;
+        let decoded = base64::engine::general_purpose::STANDARD.decode(b64_str).map_err(serde::de::Error::custom)?;
+        Ok(Bytes::from(decoded))
+    } else {
+        // Fallback for legacy
+        Ok(Bytes::from(s.into_bytes()))
     }
 }
 

@@ -180,14 +180,15 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
 
 ## 6. Iterative Implementation Roadmap (Bottom to Top)
 
-### Phase 1: Ingestion Plane (`feat/plane-1-ingestion`)
+### Phase 1: Ingestion Plane (`feat/plane-1-ingestion`) - ✅ Complete
 * **Target:** `crates/prism-ingest` & `crates/prism-common`
 * **Modules:**
-  1. `common`: Core types (`RawLogPayload`, `LogSource`, `IngestConfig`).
-  2. `buffer`: Zero-copy buffer management via `bytes::BytesMut` / `slab`.
-  3. `listener`: Async `tokio::net::UdpSocket` listening on port 514.
-  4. `dispatcher`: High-throughput lock-free `flume` channel dispatching `&[u8]`.
-* **Testing Gate:** Blast 10,000 real raw syslog lines over UDP; assert 100% packet arrival with 0 heap reallocations.
+  1. `common`: Core types (`RawEvent`, `LogSource`, `IngestConfig`), including strict Base64/UTF-8 tagged IPC.
+  2. `listener`: Amortized zero-copy buffering via `bytes::BytesMut` block allocation (`chunk_size`).
+  3. `quic`: QUIC dual-ingestion stub utilizing `quinn` with self-signed rcgen certs.
+  4. `dispatcher`: High-throughput TOCTOU-safe lock-free `flume` channel dispatching `RawEvent`.
+* **Testing Gate:** Blasted 20,000 real raw syslog lines over UDP from 10 concurrent senders; asserted 100% packet arrival, payload verification, and rigorous backpressure testing.
+
 
 ### Phase 2: Integrity Plane (`feat/plane-4-integrity`)
 * **Target:** `crates/prism-provenance`

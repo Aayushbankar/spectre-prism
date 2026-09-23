@@ -15,12 +15,15 @@ When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
 * **Schema:**
 ```json
 {
-  "timestamp": "2026-09-22T10:15:00Z",
-  "source_ip": "192.168.1.100",
-  "raw_payload": "<UNRECOGNIZED_LOG_STRING>",
-  "blake3_hash": "a1b2c3d4..."
+  "raw_payload": "utf8:<UNRECOGNIZED_LOG_STRING>",
+  "metadata": {
+    "hash": "a1b2c3d4...",
+    "timestamp": "2026-09-22T10:15:00Z",
+    "source": { "Udp": "192.168.1.100:514" }
+  }
 }
 ```
+* **Note**: `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
 * **Trigger:** `prism-brain` (Python) monitors this file using `watchdog`.
 
 ### B. Python -> Rust (The Rule Hot-Reload)

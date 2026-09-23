@@ -32,7 +32,7 @@ To develop and run PRISM locally, ensure you have the following installed:
 git clone https://github.com/Aayushbankar/spectre-prism.git
 cd spectre-prism
 ```
-*(Note: Codebase directories like `prism-core` and `prism-brain` will be initialized shortly as team members claim their tasks).*
+*(Note: Codebase directories `prism-common` and `prism-ingest` are initialized. Other planes will be initialized in later phases).*
 
 ## 🛠️ Work Allocation
 Check the WhatsApp group poll to claim your module category. Once confirmed, refer to the [Team Task Breakdown](docs/TEAM_TASK_BREAKDOWN.md) for your exact deliverables and begin development in your designated module.

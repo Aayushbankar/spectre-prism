@@ -29,6 +29,7 @@ impl Dispatcher {
     pub fn sender(&self) -> DispatcherSender {
         DispatcherSender {
             data_tx: self.data_tx.clone(),
+            data_rx: self.data_rx.clone(),
             provenance_tx: self.provenance_tx.clone(),
             drop_count: self.drop_count.clone(),
         }
@@ -50,6 +51,7 @@ impl Dispatcher {
 #[derive(Clone)]
 pub struct DispatcherSender {
     data_tx: Sender<RawEvent>,
+    data_rx: Receiver<RawEvent>,
     provenance_tx: Sender<RawEvent>,
     drop_count: Arc<AtomicU64>,
 }
@@ -60,18 +62,20 @@ pub struct BroadcastError;
 impl DispatcherSender {
     pub fn try_broadcast(&self, event: RawEvent) -> Result<(), BroadcastError> {
         if self.data_tx.is_full() || self.provenance_tx.is_full() {
-            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            self.drop_count.fetch_add(1, Ordering::SeqCst);
             return Err(BroadcastError);
         }
         
         let event_clone = event.clone();
         
         if self.data_tx.try_send(event).is_err() {
-            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            self.drop_count.fetch_add(1, Ordering::SeqCst);
             return Err(BroadcastError);
         }
         if self.provenance_tx.try_send(event_clone).is_err() {
-            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            // Rollback on partial provenance fail to prevent divergence
+            let _ = self.data_rx.try_recv();
+            self.drop_count.fetch_add(1, Ordering::SeqCst);
             return Err(BroadcastError);
         }
         
