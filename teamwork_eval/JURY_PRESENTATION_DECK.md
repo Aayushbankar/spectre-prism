@@ -13,7 +13,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 | :---: | :---: | :--- | :--- |
 | **Pitch Slide 1** | **Slide 1** | **Title, Mission & Problem Statement:** National cyber telemetry crisis; decoupling wire-speed parsing from out-of-band AI to break the Latency-Cost Trilemma. | • >100,000 EPS/core wire speed<br>• CERT-In 180-day & Section 65B compliance<br>• Zero-egress sovereign defense readiness |
 | **Pitch Slide 2** | **Slide 4** | **PRISM 4-Plane Decoupled Architecture:** Strict functional plane segregation (Rust Data Plane, Control Plane, Parquet/WORM Storage Plane, Out-of-Band AI Plane). | • 0.00 µs AI latency in data path<br>• <5 ms atomic rule hot-reload (`ArcSwap`)<br>• Standalone static binary (<50MB RSS) |
-| **Pitch Slide 3** | **Slide 5** | **Wire-Speed Data Plane Microarchitecture:** Zero-copy slab interning, AVX-512 delimiter vectorization, precompiled VRL bytecode execution. | • 3,200–5,500 CPU cycles / log<br>• 0.85 ms p99 tail latency (0 GC pauses)<br>• 1.18 GB/s sustained line rate |
+| **Pitch Slide 3** | **Slide 5** | **Wire-Speed Data Plane Microarchitecture:** Zero-copy Amortized Zero-Copy Blocks interning, AVX-512 delimiter vectorization, precompiled VRL bytecode execution. | • 3,200–5,500 CPU cycles / log<br>• 0.85 ms p99 tail latency (0 GC pauses)<br>• 1.18 GB/s sustained line rate |
 | **Pitch Slide 4** | **Slide 7 & 8** | **Forensic Provenance & Sovereign Security:** SIMD BLAKE3 socket hashing, 16-level Merkle tree, WORM Parquet vault, Thompson DFA ReDoS immunity. | • <4 µs Merkle proof verification<br>• O(m*n) linear ReDoS immunity (vs 2.79h lockup)<br>• 100% offline air-gapped SLM cage |
 | **Pitch Slide 5** | **Slide 9 & 10**| **Quantitative Scorecard & 98% TCO Reduction:** Head-to-head empirical benchmarks and 180-day CERT-In retention financial economics. | • $8,130/mo vs $418k/mo Hot ($24.6k/mo ILM)<br>• 98.05% storage savings ($4.92M/yr)<br>• 30x throughput vs Logstash |
 
@@ -54,7 +54,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 #### 3. Hard Quantifiable Metrics
 - **Sustained Line-Rate Throughput:** $>80,000\text{ to }150,000\text{ EPS per CPU core}$ ($>1.18\text{ GB/s}$ wire speed on an 8-core commodity node).
 - **Sub-Millisecond Tail Latency:** $p99 \le 850\,\mu\text{s}$ (vs. $42\text{ ms}$ in Logstash and $1,450\text{ ms}$ in inline LLMs).
-- **Zero Memory Allocation Churn:** Fixed memory slab pool bounded strictly between **$35\text{ MB}$ and $50\text{ MB}$ RSS** at peak load.
+- **Zero Memory Allocation Churn:** Fixed memory Amortized Zero-Copy Blocks pool bounded strictly between **$35\text{ MB}$ and $50\text{ MB}$ RSS** at peak load.
 - **Total Storage Reduction:** **$98.05\%$ cost reduction** for 180-day retention via Apache Parquet columnar storage and Zstandard (13.5:1 compression).
 
 #### 4. Speaker Notes & Anticipated Jury Defense
@@ -154,7 +154,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
                                 PRISM 4-PLANE DECOUPLED ARCHITECTURE
  ═══════════════════════════════════════════════════════════════════════════════════════════════════
   DATA PLANE (Pure Bare-Metal Rust / Zero-Copy / Wire-Speed Gbps)
-  [NIC Ingress] ──► [Slab Memory Arena] ──► [AVX-512 Delimiter SIMD] ──► [Precompiled VRL Engine]
+  [NIC Ingress] ──► [Amortized Zero-Copy Blocks Memory Arena] ──► [AVX-512 Delimiter SIMD] ──► [Precompiled VRL Engine]
                           │                                                       │
                           ▼                                                       ▼
   STORAGE & INTEGRITY PLANE (Tamper-Evident Forensic Vault)              [OCSF v1.9 JSON Sink]
@@ -194,7 +194,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 +--------------------------------------------------------------------------------------------------+
 |                                                                                                  |
 |   1. Socket Ingest (recvmmsg)      2. Zero-Copy Interning         3. AVX-512 SIMD Scanning       |
-|   [Kernel UDP Ring Buffer]         [Pre-allocated Slab Pool]      [32/64-byte Vector Registers]  |
+|   [Kernel UDP Ring Buffer]         [Pre-allocated Amortized Zero-Copy Blocks Pool]      [32/64-byte Vector Registers]  |
 |              │                                │                                │                 |
 |              ▼                                ▼                                ▼                 |
 |   Direct DMA Transfer              Contiguous &[u8] Slices         _mm256_cmpeq_epi8 Delimiters  |
@@ -211,7 +211,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 ```
 
 #### 2. Key Technical Talking Points
-- **Zero-Copy Slab Interning (*KELP*, arXiv 2026):** Network datagrams are received in batches via `recvmmsg` directly into pre-allocated memory slabs. Pointers and slice references (`&[u8]`) pass through the entire pipeline without heap allocations or string cloning.
+- **Amortized Zero-Copy Blocks Interning (*KELP*, arXiv 2026):** Network datagrams are received in batches via `recvmmsg` directly into pre-allocated memory blocks. Pointers and slice references (`&[u8]`) pass through the entire pipeline without heap allocations or string cloning.
 - **SIMD Delimiter Vectorization (*LogCrisp*, USENIX ATC 2025):** Employs AVX2/AVX-512 vector instructions (`_mm256_loadu_si256`, `_mm256_cmpeq_epi8`, `_mm256_movemask_epi8`) to detect field delimiters across 32 or 64 bytes in a single clock cycle, achieving a **3.8x acceleration** over sequential byte scanning.
 - **Bitwise Signature Routing:** Ingested packets are evaluated against vendor signatures (e.g., `date=`, `%ASA-`, `CEF:`) via 16-byte bitwise masks, routing to pre-compiled VRL AST graphs without regex evaluation.
 - **Deterministic VRL Runtime:** Vector Remap Language compiles into native instruction graphs. Fallible operations enforce explicit error handling (`!` or `??`), eliminating runtime panics.
@@ -223,7 +223,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 - **Garbage Collection Pauses:** Exactly **0.00 ms** (Compile-time deterministic RAII).
 
 #### 4. Speaker Notes & Anticipated Jury Defense
-- **Speaker Delivery:** "Let us look at the microarchitecture of the Data Plane. By utilizing a pre-allocated Slab Allocator and AVX-512 SIMD vectorization, we consume just 3,500 CPU clock cycles per log. That is why a single 8-core commodity server running PRISM outperforms 30 Logstash nodes combined."
+- **Speaker Delivery:** "Let us look at the microarchitecture of the Data Plane. By utilizing a pre-allocated Amortized Block Allocator and AVX-512 SIMD vectorization, we consume just 3,500 CPU clock cycles per log. That is why a single 8-core commodity server running PRISM outperforms 30 Logstash nodes combined."
 - **Anticipated Jury Question:** *"How does PRISM handle memory exhaustion if downstream SIEM sinks back up?"*
 - **Defense Answer:** "PRISM implements adaptive backpressure across its internal bounded `flume` channels. When channel high-water marks are reached, socket read loops pause, prioritizing writing raw byte streams to the Parquet vault. Incoming UDP buffers back up into kernel socket queues rather than causing user-space memory thrashing."
 
@@ -494,7 +494,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
   - *Production / Defense Deployment:* Statically linked bare-metal Rust executable (`x86_64-unknown-linux-musl`). Binds directly to physical network interfaces, eliminating Docker `veth` virtual interface context switching and kernel `iptables` NAT translation overhead.
   - *Evaluation / Reproduction Deployment:* Packaged via multi-stage Docker containers with `docker-compose.yml` for 1-click evaluation by hackathon juries and compliance auditors.
 - **Dual-Interface Observability:**
-  - *Ratatui Terminal UI:* 10 Hz real-time quad-pane operational dashboard displaying wire-speed EPS, Slab buffer health, active DLQ templates, and Merkle root notarizations.
+  - *Ratatui Terminal UI:* 10 Hz real-time quad-pane operational dashboard displaying wire-speed EPS, Amortized Zero-Copy Blocks buffer health, active DLQ templates, and Merkle root notarizations.
   - *Executive SIEM Dashboards:* Standardized OCSF v1.9.0 events feed directly into Elasticsearch, Kibana, and Grafana for enterprise threat mapping, Geo-IP analysis, and compliance auditing.
 - **Plug-and-Play Extensibility:** Operators can drop pre-compiled VRL scripts or WASM filter plugins into the `/etc/prism/rules.d/` directory for instant atomic ingestion.
 

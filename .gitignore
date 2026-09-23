@@ -1,0 +1,67 @@
+# Rust build artifacts
+/target/
+**/*.rs.bk
+*.pdb
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & NPM
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+
+# Local logs, test outputs, & runtime storage
+*.log
+dlq.log
+/var/run/prism/
+/storage/
+/vault/
+/cold_vault/
+/data/
+/scratch/
+*.parquet
+test_vault_*
+ledger.log
+root_ledger.json
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+
+# IDEs & System files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

@@ -19,11 +19,11 @@ This document details the internal module structure required to fulfill the 4-pl
 
 ### A. Ingestion Plane (`prism-ingest`)
 **Language:** Rust
-*   **`network.rs`:** 
+*   **`listener.rs` & `quic.rs`:** 
     *   Listens on UDP (Legacy firewalls) and QUIC (Next-Gen Telemetry) on Port 514.
-    *   Implements zero-copy byte buffering (Slab Allocator).
+    *   Implements amortized zero-copy buffering via `bytes::BytesMut` blocks (configured by `chunk_size = 10 MiB`) and uses `socket2` for strict `SO_RCVBUF` tuning.
 *   **`dispatcher.rs`:**
-    *   Pushes raw `&[u8]` and its BLAKE3 hash via high-throughput MPSC channels (`flume`) to the Data Plane.
+    *   Atomically fans out `RawEvent` (containing raw `&[u8]` and in-flight BLAKE3 hash) via dual high-throughput channels (`flume`) to the Data and Provenance Planes. Handles TOCTOU backpressure safely.
 
 ### B. Data Plane (`prism-core`)
 **Language:** Rust
