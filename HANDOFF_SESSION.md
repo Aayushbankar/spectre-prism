@@ -117,22 +117,20 @@
 
 In the new chat, transition directly from the Waterfall Design phase into **Iterative Implementation**.
 
-### Sprint Phase 1: Workspace & Ingestion Foundation
+### Sprint Phase 1: Workspace & Ingestion Foundation - DONE
 1. **Initialize Cargo Workspace** in `/mnt/work/projects/sih/prism`:
    ```toml
    [workspace]
    members = [
        "crates/prism-common",
        "crates/prism-ingest",
-       "crates/prism-core",
-       "crates/prism-provenance",
-       "crates/prism-tui",
    ]
    ```
 2. **Build `prism-common`:** Shared data structures (`RawEvent`, `ProvenanceMeta`, `OcsfNetworkActivity`, `Blake3Hash`).
 3. **Build `prism-ingest`:**
    * Tokio UDP listener bound to `0.0.0.0:514`.
-   * Zero-copy buffer management using `bytes::BytesMut`.
+   * Zero-copy buffer management via `bytes::BytesMut` block allocation (`chunk_size: 10MiB` contract).
+   * Strict `SO_RCVBUF` verification (8MiB) via `socket2`.
    * Dispatch raw byte slices to high-speed `flume` channels.
 4. **Build `prism-provenance`:**
    * Compute in-flight BLAKE3 hash on the `&[u8]` slice.
