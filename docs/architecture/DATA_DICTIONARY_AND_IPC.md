@@ -15,12 +15,15 @@ When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
 * **Schema:**
 ```json
 {
-  "timestamp": "2026-09-22T10:15:00Z",
-  "source_ip": "192.168.1.100",
-  "raw_payload": "<UNRECOGNIZED_LOG_STRING>",
-  "blake3_hash": "a1b2c3d4..."
+  "raw_payload": "utf8:<UNRECOGNIZED_LOG_STRING>",
+  "metadata": {
+    "hash": "a1b2c3d4...",
+    "timestamp": "2026-09-22T10:15:00Z",
+    "source": { "Udp": "192.168.1.100:514" }
+  }
 }
 ```
+* **Note**: `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
 * **Trigger:** `prism-brain` (Python) monitors this file using `watchdog`.
 
 ### B. Python -> Rust (The Rule Hot-Reload)
@@ -40,8 +43,15 @@ Regardless of the input vendor (Cisco, Fortinet, Check Point), PRISM guarantees 
 | `class_uid` | Integer | **Yes** | Hardcoded to `4001` (Network Activity). |
 | `activity_id` | Integer | **Yes** | Mapped by VRL. E.g., `1` (Allow), `2` (Deny), `3` (Reset). |
 | `time` | Long | **Yes** | Epoch timestamp of the log generation. |
+| `severity_id` | Integer | **Yes** | Severity ID (e.g., 1 for Unknown, 3 for Low, 6 for High). |
+| `severity` | String | **Yes** | String representation of severity (e.g., "High"). |
+| `status_id` | Integer | **Yes** | Status ID (e.g., 1 for Success, 2 for Failure). |
+| `confidence` | Integer | **Yes** | Confidence score of the parsing/classification. |
+| `type_uid` | Integer | **Yes** | OCSF Event Type ID. |
+| `observables` | Array[String] | **Yes** | List of extracted observables (e.g., IPs, Domains). |
 | `src_endpoint.ip` | String | **Yes** | Extracted Source IP. |
 | `src_endpoint.port` | Integer | No | Extracted Source Port. |
 | `dst_endpoint.ip` | String | **Yes** | Extracted Destination IP. |
+| `metadata.version` | String | **Yes** | PRISM Schema Version. |
 | `metadata.provenance_hash` | String | **Yes** | **Custom PRISM Extension:** The BLAKE3 hash of the raw log to satisfy forensic traceability. |
 | `metadata.vault_uri` | String | **Yes** | **Custom PRISM Extension:** The Parquet block ID where the raw log is stored. |
