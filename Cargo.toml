@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "crates/prism-common",
+    "crates/prism-ingest",
+    "crates/prism-core",
+    "crates/prism-provenance",
+    "crates/prism-tui",
+]
+resolver = "2"
