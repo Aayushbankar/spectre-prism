@@ -65,3 +65,4 @@ root_ledger.json
 *.swo
 .DS_Store
 Thumbs.db
+*.bak

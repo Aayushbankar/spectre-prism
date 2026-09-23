@@ -20,13 +20,13 @@ impl VrlEngine {
         // Wait, the error coalescing `??` caused a compile error. We'll just use parse_regex!()
         // and if it aborts at runtime, we return the original value.
         let fortinet_script = r#"
-            .ip = parse_regex!(string!(.message), r'(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
+            .ip = parse_regex!(string!(.message), r'srcip=(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
         "#;
         let cisco_script = r#"
-            .ip = parse_regex!(string!(.message), r'(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
+            .ip = parse_regex!(string!(.message), r'outside:(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
         "#;
         let palo_script = r#"
-            .ip = parse_regex!(string!(.message), r'(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
+            .ip = parse_regex!(string!(.message), r',(?P<ip>\d+\.\d+\.\d+\.\d+),').ip
         "#;
 
         let fns = all();

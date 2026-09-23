@@ -50,5 +50,6 @@ mod tests {
         }
         let duration = start.elapsed();
         println!("1 million routes took {:?}", duration);
+        assert!(duration.as_secs() < 5, "Bench took too long: {:?}", duration);
     }
 }
