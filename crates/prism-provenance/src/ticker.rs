@@ -17,6 +17,10 @@ pub struct IntegrityTicker {
 impl IntegrityTicker {
     pub fn new(rx: Receiver<RawEvent>, output_dir: &str, batch_size: usize, tick_interval: Duration) -> Result<Self> {
         let vault = VaultWriter::new(output_dir, batch_size)?;
+        
+        let ledger_path = format!("{}/ledger.log", output_dir);
+        std::fs::OpenOptions::new().create(true).write(true).truncate(true).open(&ledger_path)?;
+
         Ok(Self {
             rx,
             tree: ProvenanceTree::new(),
@@ -37,8 +41,13 @@ impl IntegrityTicker {
                 event_res = self.rx.recv_async() => {
                     match event_res {
                         Ok(event) => {
-                            self.tree.push_leaf(&event.metadata.hash)?;
-                            self.vault.append(&event)?;
+                            if self.tree.push_leaf(&event.metadata.hash).is_err() {
+                                self.process_tick()?;
+                                let _ = self.tree.push_leaf(&event.metadata.hash);
+                            }
+                            if self.vault.append(&event)? {
+                                self.process_tick()?;
+                            }
                         }
                         Err(_) => {
                             // Channel closed, flush and exit
