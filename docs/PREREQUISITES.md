@@ -1,0 +1,17 @@
+# Reproducibility & Prerequisites
+
+This document outlines the deployment configurations for various target platforms, guaranteeing PRISM can run in air-gapped SIH evaluations, high-end GPU workstations, and standard laptops for development.
+
+## Per-Device Matrix
+
+| Device | OS | CPU/GPU | RAM | Install | Config | Air-gapped | Container |
+|---|---|---|---|---|---|---|---|
+| Laptop CPU-only (your device) | Arch Linux 7.1.8 | CPU 8-core no GPU | 16GB | `pip install -r requirements.txt` | `config.yaml` device:cpu coder.enabled:false | Download wheels + `pip download` | `docker compose up` |
+| GPU Workstation | Ubuntu 22.04 | NVIDIA 4090 | 32GB | `pip install -r requirements.txt[all]` | `device:gpu` | same + `ollama pull llama3` |
+| Air-gapped NTRO | RHEL 9 | CPU | 64GB | `pip download` + transfer | `device:cpu` `air-gapped:true` | `podman load` |
+
+### Core Toolchain
+* **Rust:** `rustc 1.97.1` (Cargo Workspace)
+* **Python:** `3.12` (Control Plane)
+* **LLM (Optional):** `Ollama` for local autonomous rule generation
+* **Packages:** `watchdog`, `drain3` (Base requirements)
