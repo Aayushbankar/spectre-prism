@@ -27,9 +27,9 @@ The industry fails because it faces the **Latency-Cost Trilemma**: Regex is fast
 * **Integrity Hook:** Every raw byte slice is hashed via BLAKE3 (SIMD parallelized, FIPS-configurable) instantly.
 
 ### Plane 2: The Data Plane (The Muscle)
-* **Function:** Gbps exact-match deterministic parsing and routing to OCSF (Open Cybersecurity Schema Framework) sinks.
-* **Tech Stack:** Rust / Tokio executing **Vector Remap Language (VRL)**. 
-* **Dynamic Routing:** Heuristic packet sniffer that bypasses heavy regex. Unrecognized packets are routed to the DLQ (Dead Letter Queue).
+* **Function:** Gbps exact-match deterministic parsing and routing to OCSF 4001 (Open Cybersecurity Schema Framework) sinks.
+* **Tech Stack:** Rust / Tokio executing **Vector Remap Language (VRL)** with per-vendor ASTs. 
+* **Dynamic Routing:** `HeuristicRouter` utilizing `memchr` that bypasses heavy regex. Unrecognized packets are routed to the DLQ (Dead Letter Queue).
 
 ### Plane 3: The Control Plane (The Brain)
 * **Function:** Autonomous onboarding of unknown logs using a **Dual-AI (System 1 + System 2)** architecture.

@@ -10,9 +10,9 @@ To maintain zero-copy speeds in the Data Plane and air-gapped security in the Co
 
 ### A. Rust -> Python (The Dead Letter Queue)
 When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
-* **Path:** `/var/run/prism/dlq.log`
-* **Format:** JSON Lines (JSONL)
-* **Schema:**
+* **Path:** `/var/run/prism/dlq.log` (test `/tmp/prism_dlq.log`)
+* **Format:** JSON Lines (JSONL) for IPC, alongside a Plaintext replica for TUI.
+* **Schema:** 
 ```json
 {
   "raw_payload": "utf8:<UNRECOGNIZED_LOG_STRING>",
@@ -23,8 +23,9 @@ When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
   }
 }
 ```
-* **Note**: `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
-* **Trigger:** `prism-brain` (Python) monitors this file using `watchdog`.
+* **Note:** `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
+* **Dual-Write Note:** `dlq.rs` writes plaintext `[TIMESTAMP] REASON PAYLOAD` for the Presentation TUI, and simultaneously writes `.jsonl` for the Python IPC.
+* **Trigger:** `prism-brain` (Python) monitors the `.jsonl` file using `watchdog`.
 
 ### B. Python -> Rust (The Rule Hot-Reload)
 When `prism-brain` successfully generates a new parser, it writes a `.vrl` script and a `.yaml` signature file.
@@ -43,6 +44,7 @@ Regardless of the input vendor (Cisco, Fortinet, Check Point), PRISM guarantees 
 | `class_uid` | Integer | **Yes** | Hardcoded to `4001` (Network Activity). |
 | `activity_id` | Integer | **Yes** | Mapped by VRL. E.g., `1` (Allow), `2` (Deny), `3` (Reset). |
 | `time` | Long | **Yes** | Epoch timestamp of the log generation. |
+| `src_endpoint.ip` | String | **Yes** | Derived directly from VRL `.ip` extraction. |
 | `severity_id` | Integer | **Yes** | Severity ID (e.g., 1 for Unknown, 3 for Low, 6 for High). |
 | `severity` | String | **Yes** | String representation of severity (e.g., "High"). |
 | `status_id` | Integer | **Yes** | Status ID (e.g., 1 for Success, 2 for Failure). |
