@@ -3,16 +3,19 @@ use prism_core::{
     vrl::VrlEngine,
     ocsf::OcsfMapper,
     dlq::DeadLetterQueue,
+    sink::HttpSink,
 };
-use prism_common::{RawEvent, ProvenanceMeta, LogSource};
+use prism_common::{RawEvent, ProvenanceMeta, LogSource, OcsfNetworkActivity, Endpoint, VaultMetadata};
 use bytes::Bytes;
 use chrono::Utc;
 use std::fs;
+use httptest::{Server, Expectation, matchers::*, responders::*};
 
 #[tokio::test]
 async fn test_data_plane_routing() {
-    let _ = fs::remove_file("dlq.log");
-    let mut dlq = DeadLetterQueue::new("dlq.log").unwrap();
+    let dlq_path = "/tmp/prism_dlq.log";
+    let _ = fs::remove_file(dlq_path);
+    let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
     let vrl = VrlEngine::new().unwrap();
     
     // Test 50,000 heterogeneous logs
@@ -31,10 +34,10 @@ async fn test_data_plane_routing() {
         let parsed = vrl.process(&vendor, payload_str).unwrap();
         let ocsf = OcsfMapper::map(parsed, &hash.to_hex(), Utc::now().timestamp_millis());
         
-        // OCSF schema validation (basic invariants)
         assert_eq!(ocsf.class_uid, 4001);
         assert_eq!(ocsf.metadata.version, "1.9.0");
         assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str());
+        assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5");
     }
 
     // Unknown -> DLQ
@@ -48,6 +51,41 @@ async fn test_data_plane_routing() {
     };
     dlq.push(&alien_event, "Unknown Vendor").unwrap();
     
-    let dlq_contents = fs::read_to_string("dlq.log").unwrap();
+    let dlq_contents = fs::read_to_string(dlq_path).unwrap();
     assert!(dlq_contents.contains("alien raw bytes"));
+}
+
+#[tokio::test]
+async fn test_sink_http_mock() {
+    let server = Server::run();
+    server.expect(
+        Expectation::matching(request::method_path("POST", "/bulk"))
+            .respond_with(status_code(200)),
+    );
+
+    let url = server.url_str("/bulk");
+    let sink = HttpSink::new(&url);
+    let batch = vec![OcsfNetworkActivity {
+        activity_id: 1,
+        category_uid: 4,
+        class_uid: 4001,
+        severity_id: 1,
+        severity: "Informational".to_string(),
+        status_id: 1,
+        confidence: 100,
+        type_uid: 400101,
+        time: 123456,
+        src_endpoint: Endpoint { ip: "1.1.1.1".to_string(), port: 0 },
+        dst_endpoint: Endpoint { ip: "2.2.2.2".to_string(), port: 0 },
+        observables: vec![],
+        raw_data: None,
+        metadata: VaultMetadata {
+            version: "1.9.0".to_string(),
+            vault_uri: "local".to_string(),
+            provenance_hash: "hash".to_string(),
+        },
+    }];
+
+    let res = sink.push_bulk(&batch).await;
+    assert!(res.is_ok());
 }

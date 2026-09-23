@@ -1,17 +1,20 @@
-use serde_json::Value;
+use vrl::value::Value;
 use prism_common::{OcsfNetworkActivity, Endpoint, VaultMetadata};
 
 pub struct OcsfMapper;
 
 impl OcsfMapper {
     pub fn map(value: Value, hash: &str, timestamp: i64) -> OcsfNetworkActivity {
-        // Fallbacks if mapping fails, ideally read from VRL output `value`
-        let src_ip = value.get("srcip").and_then(|v| v.as_str()).unwrap_or("0.0.0.0").to_string();
-        let dst_ip = value.get("dstip").and_then(|v| v.as_str()).unwrap_or("0.0.0.0").to_string();
+        // VRL object contains the parsed IP if successful
+        let src_ip = match value.as_object().and_then(|m| m.get("ip")) {
+            Some(Value::Bytes(b)) => String::from_utf8_lossy(b).to_string(),
+            _ => "0.0.0.0".to_string(),
+        };
+        let dst_ip = "0.0.0.0".to_string(); // Placeholder or extracted if needed
 
         OcsfNetworkActivity {
             activity_id: 1,
-            category_uid: 2,
+            category_uid: 4,
             class_uid: 4001,
             severity_id: 1,
             severity: "Informational".to_string(),
@@ -28,7 +31,9 @@ impl OcsfMapper {
                 port: 0,
             },
             observables: vec![],
-            raw_data: value.get("message").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            raw_data: value.as_object().and_then(|m| m.get("message")).and_then(|v| {
+                if let Value::Bytes(b) = v { Some(String::from_utf8_lossy(b).to_string()) } else { None }
+            }),
             metadata: VaultMetadata {
                 version: "1.9.0".to_string(),
                 vault_uri: "local".to_string(),

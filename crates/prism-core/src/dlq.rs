@@ -9,11 +9,15 @@ pub struct DeadLetterQueue {
 }
 
 impl DeadLetterQueue {
-    pub fn new(path: &str) -> Result<Self> {
+    pub fn new(path: Option<&str>) -> Result<Self> {
+        let actual_path = path.unwrap_or("/var/run/prism/dlq.log");
+        if let Some(parent) = std::path::Path::new(actual_path).parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let file = OpenOptions::new()
             .create(true)
             .append(true)
-            .open(path)?;
+            .open(actual_path)?;
         Ok(Self { file })
     }
 
