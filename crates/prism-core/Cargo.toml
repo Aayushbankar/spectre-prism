@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.104"
+blake3 = "1.8.7"
 bytes = "1.12.1"
 chrono = "0.4.45"
 prism-common = { version = "0.1.0", path = "../prism-common" }
