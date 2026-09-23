@@ -1,0 +1,13 @@
+graph TD
+    A[INCOMING LOGS UDP/QUIC 514] --> B
+    subgraph B[PLANE 1: INGESTION PLANE]
+        direction TB
+        B1[tokio / quinn listeners]
+        B2[Amortized Zero-Copy Blocks chunk_size 10MiB]
+        B3[BLAKE3 SIMD Hash]
+        B1 --> B2 --> B3
+    end
+    B -->|Zero-copy slice + hash| C[PLANE 2: DATA PLANE]
+    B -->|Raw bytes + hash| D[PLANE 4: INTEGRITY PLANE]
+    C -->|Parse Failure| E[Dead Letter Queue]
+    E --> F[PLANE 3: CONTROL PLANE]

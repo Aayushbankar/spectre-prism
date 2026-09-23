@@ -42,7 +42,7 @@
 +------------------------------------------------------------------------------------------+
 | PLANE 1: INGESTION PLANE (Rust - `prism-ingest`)                                         |
 | - `tokio::net::UdpSocket` / `quinn` async listeners                                       |
-| - Zero-Copy Slab Allocator (`bytes::BytesMut`)                                           |
+| - Amortized Zero-Copy Blocks (`chunk_size` 10MiB)                                        |
 | - Pre-parsing BLAKE3 SIMD cryptographic hashing                                          |
 +------------------------------------------------------------------------------------------+
            |                                                              |
@@ -132,9 +132,6 @@ In the new chat, transition directly from the Waterfall Design phase into **Iter
    * Zero-copy buffer management via `bytes::BytesMut` block allocation (`chunk_size: 10MiB` contract).
    * Strict `SO_RCVBUF` verification (8MiB) via `socket2`.
    * Dispatch raw byte slices to high-speed `flume` channels.
-4. **Build `prism-provenance`:**
-   * Compute in-flight BLAKE3 hash on the `&[u8]` slice.
-   * Basic batcher writing raw logs into Zstd-compressed Apache Parquet blocks.
 
 ---
 
