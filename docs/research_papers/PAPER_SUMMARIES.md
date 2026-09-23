@@ -26,6 +26,6 @@ The PRISM architecture directly implements the findings of these four breakthrou
 ## 4. KELP: Robust Online Log Parsing Through Evolutionary Grouping Trees
 *   **Authors:** Satyam Singh, Sai Niranjan Ramachandran
 *   **Venue:** arXiv Pre-print (2026)
-*   **Summary:** Introduces Zero-Copy Interning via Slab allocators to bypass object-oriented pointer indirection during parsing.
+*   **Summary:** Introduces Zero-Copy Interning via Amortized Zero-Copy Blocks allocators to bypass object-oriented pointer indirection during parsing.
 *   **Metrics:** Achieves near-perfect accuracy (0.956) in high-entropy sets with massive memory reductions.
 *   **PRISM Implementation:** Validates our architectural constraint requiring the Rust Data Plane to operate with a zero-copy memory footprint (target <50MB RAM), directly solving the Elasticsearch/JVM memory bloat currently affecting NTRO.

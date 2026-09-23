@@ -74,7 +74,7 @@ To establish a rigorous baseline, we formalize the four competing architectural 
 
 ### 1. PRISM: 4-Plane Architecture (Rust / Tokio / Parquet / Local SLM)
 PRISM structurally segregates responsibilities across four independent planes:
-- **Data Plane (The Muscle):** Written in 100% bare-metal Rust on the Tokio asynchronous runtime. Employs pre-allocated Zero-Copy Slab Interning, AVX-512 SIMD delimiter scanning, and compiled Vector Remap Language (VRL) execution graphs. Sustains $>80,000\text{–}150,000\text{ EPS/core}$ with deterministic sub-millisecond p99 latency ($<25\,\mu\text{s}$) and zero garbage collection pauses.
+- **Data Plane (The Muscle):** Written in 100% bare-metal Rust on the Tokio asynchronous runtime. Employs pre-allocated Zero-Copy Amortized Zero-Copy Blocks Interning, AVX-512 SIMD delimiter scanning, and compiled Vector Remap Language (VRL) execution graphs. Sustains $>80,000\text{–}150,000\text{ EPS/core}$ with deterministic sub-millisecond p99 latency ($<25\,\mu\text{s}$) and zero garbage collection pauses.
 - **Control Plane (The Brain):** Governs rule distribution, health telemetry, and backpressure. Operates an atomic pointer swap mechanism (`ArcSwap`) that dynamically recompiles and hot-reloads parsing rules in $<5\text{ ms}$ without restarting daemons or dropping socket datagrams.
 - **Storage & Integrity Plane (The Bone):** Hooks directly into socket ingestion. Computes hardware-accelerated BLAKE3 hashes at $5.8\text{ GB/s/core}$ (via multi-buffer batch hashing across `recvmmsg` rings), batches hashes into 16-level Merkle Trees ($N=65,536$, depth $D=16$, 512-byte audit path), and writes raw payloads to an immutable cold vault using Apache Parquet and Zstandard (13.5:1 compression ratio, 1.08x write amplification). Emits OCSF JSON records containing bidirectional `_provenance` pointers.
 - **AI & Inference Plane:** Operates strictly out-of-band on the Dead Letter Queue (DLQ). Employs Drain3 fixed-depth parse trees to compress 50,000 unknown logs into 1 static template, triage via a deterministic System 1 classifier (Open Jev, 0% hallucination), and code synthesis via a local quantized System 2 Small Language Model (Llama-3-8B INT4 via Ollama). Synthesized VRL scripts are validated through an AST verification cage and human-in-the-loop (HitL) gatekeeper.
@@ -102,7 +102,7 @@ The following benchmark matrix synthesizes empirical performance across all four
 | **Severe Tail Latency ($p99$)** | **0.85 ms (850 $\mu$s)** | 42.00 ms | 14.50 ms | 1,450.0 ms |
 | **Extreme Outlier Latency ($p99.99$)** | **2.10 ms (2,100 $\mu$s)** | 480.00 ms (GC pause) | 65.00 ms (GC pause) | >4,800.0 ms (Queue timeout) |
 | **Mean CPU Cycles Consumed per Log** | **3,200 – 5,500 cycles** | 95,000 – 180,000 cycles | 28,000 – 62,000 cycles | $>1.2\times 10^{12}$ FLOPs / log (>1.2T FLOPs) |
-| **Resident Memory Footprint (RSS)** | **35 MB – 50 MB** (Static Slab) | 4 GB – 16 GB (JVM Heap) | 800 MB – 3.5 GB (Go Heap) | 16 GB – 80 GB (VRAM / Host RAM) |
+| **Resident Memory Footprint (RSS)** | **35 MB – 50 MB** (Static Amortized Zero-Copy Blocks) | 4 GB – 16 GB (JVM Heap) | 800 MB – 3.5 GB (Go Heap) | 16 GB – 80 GB (VRAM / Host RAM) |
 | **Garbage Collection (GC) Pauses** | **0.00 ms** (Deterministic RAII)| 25 ms – 250 ms (G1GC / ZGC)| 2 ms – 20 ms (Mark-Assist) | N/A (Python/CUDA OOM risk) |
 | **In-Memory Buffer Copies (Ingest $\to$ Sink)**| **0 – 1 copies** (Zero-copy slice)| 6 – 7 copies (NIO $\to$ JVM)| 3 – 4 copies (Slice $\to$ Box)| Multiple PCIe Host-Device Copies |
 | **Pattern Matching Engine** | **AVX-512 SIMD / VRL Bytecode** | PCRE / JRuby Backtracking | Go RE2 DFA / cgo Hyperscan | Autoregressive Transformer |
@@ -147,7 +147,7 @@ Where $f_{\text{CPU}}$ is core frequency (e.g., $3.0\times 10^9\text{ Hz}$) and 
 ```
 
 1. **PRISM ($\bar{C}_{\text{log}} \approx 3,500\text{ cycles}$):**
-   - Socket I/O leverages `recvmmsg` non-blocking calls loading raw datagrams directly into contiguous slabs ($~800\text{ cycles}$).
+   - Socket I/O leverages `recvmmsg` non-blocking calls loading raw datagrams directly into contiguous Amortized Zero-Copy Blockss ($~800\text{ cycles}$).
    - BLAKE3 tree-hashing vectorizes across AVX-512 registers at $3.2\text{–}5.8\text{ GB/s/core}$ (via multi-buffer batch hashing across `recvmmsg` rings, with $1.04\text{–}1.2\text{ GB/s}$ scalar single-packet baseline), consuming only $1,100\text{ cycles}$ for an 800-byte log.
    - VRL compiles into deterministic instruction graphs operating on borrowed byte slices (`&[u8]`), avoiding heap allocations ($~1,200\text{ cycles}$).
    - Inter-thread handoff uses lock-free bounded channels (`flume`) with atomic pointer updates ($~400\text{ cycles}$).
@@ -182,12 +182,12 @@ Latency (Logarithmic Scale: Microseconds to Milliseconds)
              p50              p90              p99              p99.9
 ```
 
-- **PRISM ($p50: 180\,\mu\text{s} \mid p99: 850\,\mu\text{s} \mid p99.99: 2.10\text{ ms}$):** Pre-allocated slabs prevent queue buildup. Absence of garbage collection bounds latency strictly to CPU cache and kernel interrupts.
+- **PRISM ($p50: 180\,\mu\text{s} \mid p99: 850\,\mu\text{s} \mid p99.99: 2.10\text{ ms}$):** Pre-allocated Amortized Zero-Copy Blockss prevent queue buildup. Absence of garbage collection bounds latency strictly to CPU cache and kernel interrupts.
 - **Logstash ($p50: 8.5\text{ ms} \mid p99: 42.0\text{ ms} \mid p99.99: 480.0\text{ ms}$):** Degraded by Kafka `linger.ms`, disk commit flushes, and G1GC young-generation evacuation pauses.
 - **Pure Go ($p50: 1.2\text{ ms} \mid p99: 14.5\text{ ms} \mid p99.99: 65.0\text{ ms}$):** Go runtime `sysmon` preemption and mark-assist surges inflate tail latency.
 - **Inline LLM ($p50: 350.0\text{ ms} \mid p99: 1,450.0\text{ ms} \mid p99.99: >4,800.0\text{ ms}$):** Bound to autoregressive decode steps (10–25ms per token) and batch queue head-of-line blocking.
 
-### 1.3 Memory Mechanics: Zero-Copy Slab vs Heap Churn
+### 1.3 Memory Mechanics: Zero-Copy Amortized Zero-Copy Blocks vs Heap Churn
 ```
 +------------------------------------------------------------------------------------+
 |                         MEMORY ARCHITECTURE COMPARISON                             |
@@ -214,12 +214,12 @@ Latency (Logarithmic Scale: Microseconds to Milliseconds)
 +------------------------------------------------------------------------------------+
 ```
 
-- **PRISM's Slab Interning (*KELP*, 2026):** Allocates a fixed contiguous memory arena at initialization. Datagrams populate fixed slots. Slices (`&[u8]`) propagate downstream without heap allocation. Downstream JSON serialization to the OCSF sink utilizes pre-allocated scratch buffers and borrowed zero-copy byte formatters (e.g., direct byte slice emission without dynamic DOM allocation), preventing heap fragmentation during high-throughput HTTP micro-batching. After batch commit, slots are reset via atomic bitmask operations ($O(1)$). Memory fragmentation is zero, and RSS remains strictly bounded between **35MB and 50MB** even at 500,000 EPS.
+- **PRISM's Amortized Zero-Copy Blocks Interning (*KELP*, 2026):** Allocates a fixed contiguous memory arena at initialization. Datagrams populate fixed slots. Slices (`&[u8]`) propagate downstream without heap allocation. Downstream JSON serialization to the OCSF sink utilizes pre-allocated scratch buffers and borrowed zero-copy byte formatters (e.g., direct byte slice emission without dynamic DOM allocation), preventing heap fragmentation during high-throughput HTTP micro-batching. After batch commit, slots are reset via atomic bitmask operations ($O(1)$). Memory fragmentation is zero, and RSS remains strictly bounded between **35MB and 50MB** even at 500,000 EPS.
 - **Logstash Object Churn:** At 30,000 EPS with 15 fields per log, Logstash generates $450,000\text{ objects/sec}$ ($~350\text{ MB/sec}$ of transient heap allocations), triggering constant GC sweeps and heap fragmentation.
 - **Multi-Copy Data Flow Bottleneck:**
   ```
   PRISM Zero-Copy Flow (0 Heap Copies):
-  [NIC DMA] ──► [Slab Buffer: &[u8]] ──► BLAKE3 / VRL Parser / Parquet Vault
+  [NIC DMA] ──► [Amortized Zero-Copy Blocks Buffer: &[u8]] ──► BLAKE3 / VRL Parser / Parquet Vault
 
   Kafka + Logstash Multi-Copy Flow (6-7 Copies):
   [NIC DMA] ──► [Kernel Buffer] ──► [NIO DirectBuffer] ──► [JVM Heap byte[]] 
