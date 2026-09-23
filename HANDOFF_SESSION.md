@@ -190,7 +190,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
 * **Modules:**
   1. `hasher`: BLAKE3 SIMD in-flight hashing on the incoming `&[u8]` slice.
   2. `vault`: Apache Parquet writer with `zstd` compression batching raw payloads.
-  3. `merkle`: 16-level Merkle tree generating 60-second root hashes.
+  3. `merkle`: 16-level Merkle tree generating 60-second root hashes (limit is per-tick, bounded to 65,536 leaves before forcing an immediate vault flush + ledger atomic write).
 * **Testing Gate:** Feed real attack flow logs; verify Merkle root matches; intentionally mutate 1 byte in a Parquet record and assert the audit check immediately fails.
 
 ### Phase 3: Data Plane (`feat/plane-2-data-plane`)
