@@ -118,6 +118,7 @@
 In the new chat, transition directly from the Waterfall Design phase into **Iterative Implementation**.
 
 ### Sprint Phase 1: Workspace & Ingestion Foundation - DONE
+### Sprint Phase 2: Data Plane - DONE
 1. **Initialize Cargo Workspace** in `/mnt/work/projects/sih/prism`:
    ```toml
    [workspace]
@@ -157,7 +158,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
     ^                                                          |
 [Layer 3] Control Plane (Brain: Drain3 + Open Jev + Ollama)    |
     ^                                                          |
-[Layer 2] Data Plane (VRL Mapper + Router + OCSF Serialization)|
+[Layer 2] Data Plane (router/vrl/ocsf/dlq/sink)|
     ^                                                          |
 [Layer 4] Integrity Plane (BLAKE3 Hashing + Parquet Vault)     |
     ^                                                          |
@@ -185,24 +186,23 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
 * **Testing Gate:** Blasted 20,000 real raw syslog lines over UDP from 10 concurrent senders; asserted 100% packet arrival, payload verification, and rigorous backpressure testing.
 
 
-### Phase 2: Integrity Plane (`feat/plane-4-integrity`)
+### Phase 2: Data Plane (`feat/plane-2-data-plane`) - ✅ Complete
+* **Target:** `crates/prism-core`
+* **Modules:**
+  1. `router`: Microsecond heuristic byte-pattern vendor classifier using `memchr`.
+  2. `vrl`: Datadog VRL execution engine with per-vendor `parse_regex`.
+  3. `ocsf`: Class 4001 Network Activity schema serialization with provenance hash injected.
+  4. `dlq`: Dead Letter Queue file sink (`/var/run/prism/dlq.log`) for unrecognized logs.
+  5. `sink`: HTTP Bulk Exporter (`reqwest`) pushing to SIEM.
+* **Testing Gate:** Ingest 50,000 mixed logs; verify OCSF 4001 + dlq.log verified.
+
+### Phase 3: Integrity Plane (`feat/plane-4-integrity`) - ✅ Complete
 * **Target:** `crates/prism-provenance`
 * **Modules:**
   1. `hasher`: BLAKE3 SIMD in-flight hashing on the incoming `&[u8]` slice.
   2. `vault`: Apache Parquet writer with `zstd` compression batching raw payloads.
   3. `merkle`: 16-level Merkle tree generating 60-second root hashes (limit is per-tick, bounded to 65,536 leaves before forcing an immediate vault flush + ledger atomic write).
 * **Testing Gate:** Feed real attack flow logs; verify Merkle root matches; intentionally mutate 1 byte in a Parquet record and assert the audit check immediately fails.
-
-### Phase 3: Data Plane (`feat/plane-2-data-plane`)
-* **Target:** `crates/prism-core`
-* **Modules:**
-  1. `router`: Microsecond heuristic byte-pattern vendor classifier.
-  2. `vrl`: Datadog VRL execution engine with Fortinet & Cisco ASA ASTs.
-  3. `ocsf`: Class 4001 Network Activity schema serialization with provenance hash injected.
-  4. `dlq`: Dead Letter Queue file sink (`dlq.log`) for unrecognized/failed logs.
-  5. `sink`: HTTP Bulk Exporter (`reqwest`) pushing to SIEM.
-* **Testing Gate:** Ingest 50,000 mixed real Cisco/FortiGate logs; verify output strictly validates against OCSF JSON schema; verify unrecognized logs route to `dlq.log`.
-
 ### Phase 4: Control Plane (`feat/plane-3-control-plane`)
 * **Target:** `prism-brain/` (Python)
 * **Modules:**

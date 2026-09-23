@@ -10,20 +10,9 @@ To maintain zero-copy speeds in the Data Plane and air-gapped security in the Co
 
 ### A. Rust -> Python (The Dead Letter Queue)
 When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
-* **Path:** `/var/run/prism/dlq.log`
-* **Format:** JSON Lines (JSONL)
-* **Schema:**
-```json
-{
-  "raw_payload": "utf8:<UNRECOGNIZED_LOG_STRING>",
-  "metadata": {
-    "hash": "a1b2c3d4...",
-    "timestamp": "2026-09-22T10:15:00Z",
-    "source": { "Udp": "192.168.1.100:514" }
-  }
-}
-```
-* **Note**: `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
+* **Path:** `/var/run/prism/dlq.log` (test `/tmp/prism_dlq.log`)
+* **Format:** Plaintext Append
+* **Schema:** `[TIMESTAMP] REASON=<reason> PAYLOAD=<utf8_string>`
 * **Trigger:** `prism-brain` (Python) monitors this file using `watchdog`.
 
 ### B. Python -> Rust (The Rule Hot-Reload)
@@ -43,6 +32,7 @@ Regardless of the input vendor (Cisco, Fortinet, Check Point), PRISM guarantees 
 | `class_uid` | Integer | **Yes** | Hardcoded to `4001` (Network Activity). |
 | `activity_id` | Integer | **Yes** | Mapped by VRL. E.g., `1` (Allow), `2` (Deny), `3` (Reset). |
 | `time` | Long | **Yes** | Epoch timestamp of the log generation. |
+| `src_endpoint.ip` | String | **Yes** | Derived directly from VRL `.ip` extraction. |
 | `severity_id` | Integer | **Yes** | Severity ID (e.g., 1 for Unknown, 3 for Low, 6 for High). |
 | `severity` | String | **Yes** | String representation of severity (e.g., "High"). |
 | `status_id` | Integer | **Yes** | Status ID (e.g., 1 for Success, 2 for Failure). |

@@ -11,11 +11,11 @@
 
 ## 1. Core Project (Data & Ingestion Plane)
 **Owner:** Systems Engineer (Rust)
-**Crates/Dependencies:** `tokio`, `bytes`, `vrl`, `notify`
+**Crates/Dependencies:** `tokio`, `bytes`, `memchr`, `vrl`, `reqwest`, `httptest`
 
 ### Micro-Task 1.1: Zero-Copy Network Listener
 *   **Target File:** `prism-core/src/ingest/listener.rs`
-*   **Agent Instructions:** Implement an asynchronous `tokio::net::UdpSocket` bound to port 514. Do not allocate new `String` or `Vec<u8>` for every packet. Instead, implement a zero-copy memory pool using amortized `bytes::BytesMut` blocks. When a packet arrives, yield a read-only slice (`&[u8]`) and pass it to a high-throughput `flume` channel.
+*   **Agent Instructions:** Implement an asynchronous `tokio::net::UdpSocket` bound to port 514. Do not allocate new `String` or `Vec<u8>` for every packet. Instead, implement a zero-copy memory pool using amortized `bytes::BytesMut` blocks. When a packet arrives, yield a read-only slice (`&[u8]`) and pass it to a high-throughput `flume` channel. Use `memchr` for heuristic scanning.
 *   **Acceptance Criteria:** Zero heap allocations per packet after initialization. Benchmarked at >50,000 EPS.
 
 ### Micro-Task 1.2: VRL Execution Engine
