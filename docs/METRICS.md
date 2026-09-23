@@ -78,3 +78,4 @@
 * **Timestamp:** 2026-09-23T16:41:36.801532Z
 * **Status:** Bootstrapped (1/1 pytest passing)
 * **AI/ML Modules:** Drain3, Transformers (zero-shot), Ollama Llama-3
+* **CPU-Only Metrics:** Drain3 (1 template) in 0.01s, Triage heuristic in 0.001s (vs Jev 0.5s on GPU), Coder heuristic in 0s (vs Ollama 2s).
