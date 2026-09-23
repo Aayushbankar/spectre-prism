@@ -93,12 +93,14 @@ async fn test_integrity_plane_success() {
         let file = File::open(parquet_file).unwrap();
         let reader = SerializedFileReader::new(file).unwrap();
         let metadata = reader.metadata();
-        let row_group = metadata.row_group(0);
-        for col_idx in 0..row_group.num_columns() {
-            let column_chunk = row_group.column(col_idx);
-            match column_chunk.compression() {
-                Compression::ZSTD(_) => {},
-                other => panic!("Expected ZSTD compression on column {}, got {:?}", col_idx, other),
+        for rg_idx in 0..metadata.num_row_groups() {
+            let row_group = metadata.row_group(rg_idx);
+            for col_idx in 0..row_group.num_columns() {
+                let column_chunk = row_group.column(col_idx);
+                match column_chunk.compression() {
+                    Compression::ZSTD(_) => {},
+                    other => panic!("Expected ZSTD compression on column {}, got {:?}", col_idx, other),
+                }
             }
         }
         
@@ -241,7 +243,7 @@ async fn test_integrity_plane_mutation_fails() {
 }
 
 #[tokio::test]
-async fn test_audit_invalid_hex() {
+async fn test_audit_invalid_hex_valid() {
     let output_dir = "test_vault_invalid_hex";
     fs::remove_dir_all(output_dir).ok();
     
@@ -302,7 +304,7 @@ async fn test_audit_invalid_hex() {
     
     let result = audit_vault_file(&mutated_file_path);
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("Audit Failed: Payload hash mismatch"));
+    assert!(result.unwrap_err().to_string().contains("Invalid hex hash"));
 }
 
 #[tokio::test]
@@ -344,6 +346,11 @@ async fn test_audit_concurrent_10_senders() {
     }).collect();
     
     assert!(!parquet_files.is_empty());
+    
+    let ledger_path = format!("{}/ledger.log", output_dir);
+    let ledger_contents = fs::read_to_string(&ledger_path).unwrap();
+    let ledger_lines: Vec<&str> = ledger_contents.lines().filter(|l| !l.is_empty()).collect();
+    assert_eq!(ledger_lines.len(), parquet_files.len());
     
     for file in parquet_files {
         audit_vault_file(file.to_str().unwrap()).unwrap();

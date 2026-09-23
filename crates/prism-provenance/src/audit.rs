@@ -22,14 +22,15 @@ pub fn audit_vault_file(path: &str) -> Result<[u8; 32]> {
             let recorded_hash_hex = hash_col.value(i);
             let payload_bytes = payload_col.value(i);
             
+            // Add to Merkle Tree by parsing first
+            let hash = blake3::Hash::from_hex(recorded_hash_hex).map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?;
+            
             // Recompute hash
             let computed_hash = blake3::hash(payload_bytes);
-            if computed_hash.to_hex().as_str() != recorded_hash_hex {
+            if computed_hash != hash {
                 bail!("Audit Failed: Payload hash mismatch at row {}. Expected {}, got {}", i, recorded_hash_hex, computed_hash.to_hex());
             }
             
-            // Add to Merkle Tree
-            let hash = blake3::Hash::from_hex(recorded_hash_hex).map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?;
             tree.push_leaf(&hash)?;
         }
     }

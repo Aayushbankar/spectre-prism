@@ -71,6 +71,7 @@ impl IntegrityTicker {
                 if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&ledger_path) {
                     use std::io::Write;
                     let _ = writeln!(file, "{},{}", chrono::Utc::now().to_rfc3339(), root_hex);
+                    let _ = file.sync_all();
                 }
             }
             self.tree.reset();
