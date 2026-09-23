@@ -48,11 +48,7 @@ impl VaultWriter {
 
     pub fn append(&mut self, event: &RawEvent) -> Result<bool> {
         self.timestamp_builder.append_value(event.metadata.timestamp.timestamp_millis());
-        let source_str = match &event.metadata.source {
-            prism_common::LogSource::Udp(addr) => format!("udp://{}", addr),
-            prism_common::LogSource::Quic(addr) => format!("quic://{}", addr),
-            prism_common::LogSource::Unknown => "unknown".to_string(),
-        };
+        let source_str = serde_json::to_string(&event.metadata.source).unwrap_or_else(|_| "{}".to_string());
         self.source_builder.append_value(source_str);
         self.hash_builder.append_value(event.metadata.hash.to_hex().as_str());
         self.payload_builder.append_value(event.payload.as_ref());

@@ -88,7 +88,8 @@ async fn test_integrity_plane_success() {
         assert!(ledger_contents.contains(&expected_hash), "Ledger missing hash {}", expected_hash);
     }
     
-    // Audit all files and verify Zstd compression via WriterProperties on all columns
+    let mut audit_roots = vec![];
+    
     for parquet_file in &parquet_files {
         let file = File::open(parquet_file).unwrap();
         let reader = SerializedFileReader::new(file).unwrap();
@@ -104,9 +105,15 @@ async fn test_integrity_plane_success() {
             }
         }
         
-        // Ensure audit passes
-        audit_vault_file(parquet_file.to_str().unwrap()).unwrap();
+        let audit_root = audit_vault_file(parquet_file.to_str().unwrap()).unwrap();
+        audit_roots.push(hex::encode(audit_root));
     }
+    
+    let mut ledger_roots: Vec<String> = ledger_lines.iter().map(|l| l.split(',').nth(1).unwrap().to_string()).collect();
+    
+    audit_roots.sort();
+    ledger_roots.sort();
+    assert_eq!(audit_roots, ledger_roots);
 }
 
 #[tokio::test]
@@ -132,6 +139,12 @@ async fn test_empty_vault() {
     }).collect();
     
     assert_eq!(parquet_files.len(), 0);
+    
+    // Assert ledger file exists and is empty
+    let ledger_path = format!("{}/ledger.log", output_dir);
+    assert!(fs::metadata(&ledger_path).is_ok(), "ledger.log must exist");
+    let ledger_contents = fs::read_to_string(&ledger_path).unwrap();
+    assert!(ledger_contents.is_empty(), "ledger must have 0 lines for empty vault");
 }
 
 #[tokio::test]
