@@ -211,7 +211,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 ```
 
 #### 2. Key Technical Talking Points
-- **Zero-Copy Amortized Zero-Copy Blocks Interning (*KELP*, arXiv 2026):** Network datagrams are received in batches via `recvmmsg` directly into pre-allocated memory Amortized Zero-Copy Blockss. Pointers and slice references (`&[u8]`) pass through the entire pipeline without heap allocations or string cloning.
+- **Amortized Zero-Copy Blocks Interning (*KELP*, arXiv 2026):** Network datagrams are received in batches via `recvmmsg` directly into pre-allocated memory blocks. Pointers and slice references (`&[u8]`) pass through the entire pipeline without heap allocations or string cloning.
 - **SIMD Delimiter Vectorization (*LogCrisp*, USENIX ATC 2025):** Employs AVX2/AVX-512 vector instructions (`_mm256_loadu_si256`, `_mm256_cmpeq_epi8`, `_mm256_movemask_epi8`) to detect field delimiters across 32 or 64 bytes in a single clock cycle, achieving a **3.8x acceleration** over sequential byte scanning.
 - **Bitwise Signature Routing:** Ingested packets are evaluated against vendor signatures (e.g., `date=`, `%ASA-`, `CEF:`) via 16-byte bitwise masks, routing to pre-compiled VRL AST graphs without regex evaluation.
 - **Deterministic VRL Runtime:** Vector Remap Language compiles into native instruction graphs. Fallible operations enforce explicit error handling (`!` or `??`), eliminating runtime panics.
