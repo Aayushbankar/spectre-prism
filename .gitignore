@@ -65,3 +65,8 @@ root_ledger.json
 *.swo
 .DS_Store
 Thumbs.db
+*.bak
+*.log
+*.jsonl
+fix_*.py
+update_*.py
