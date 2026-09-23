@@ -138,31 +138,95 @@ In the new chat, transition directly from the Waterfall Design phase into **Iter
    * Compute in-flight BLAKE3 hash on the `&[u8]` slice.
    * Basic batcher writing raw logs into Zstd-compressed Apache Parquet blocks.
 
-### Sprint Phase 2: Data Plane & VRL Transformation
-1. **Integrate VRL:**
-   * Embed `vrl` crate into `prism-core`.
-   * Write sample VRL remap scripts for Fortinet (`fortigate.vrl`) and Cisco ASA (`cisco_asa.vrl`).
-   * Implement the byte-heuristic sniffer for microsecond vendor identification.
-2. **OCSF Serializer & DLQ Switch:**
-   * Map VRL output into verified OCSF Class 4001 JSON.
-   * If parsing fails or vendor is unrecognized, route raw payload to `/var/run/prism/dlq.log`.
-3. **HTTP Bulk Sink:**
-   * Implement batch exporter (`reqwest`) pushing to Elasticsearch `_bulk` endpoint.
+---
 
-### Sprint Phase 3: Control Plane AI (`prism-brain`)
-1. Create `prism-brain/` directory with `requirements.txt` (`drain3`, `transformers`, `ollama`, `watchdog`).
-2. Implement `cluster.py` to watch `dlq.log` and extract templates via Drain3.
-3. Implement `coder.py` connecting to local Ollama to auto-generate VRL scripts for unknown logs.
-4. Test dynamic hot-reloading in `prism-core` using `notify`.
+## 5. Development Governance & Branching Strategy
 
-### Sprint Phase 4: Observability & Presentation
-1. Build `prism-tui` using `ratatui` (Real-time EPS gauge, packet stream, DLQ counter, HitL approval modal).
-2. Create `docker-compose.yml` for local Elasticsearch + Kibana sink.
-3. Build the synthetic traffic generator (`tools/streamer.py`) to blast 50,000+ EPS for testing.
+To keep `main` 100% clean and protected, development adheres to strict engineering rules:
+
+### A. Git Branching Rules
+1. **Protected `main`:** No direct development commits on `main`. `main` only receives verified, fully tested merge commits.
+2. **Branch Per Plane:** Every plane is developed in isolation on its own feature branch:
+   * **Plane 1 (Ingestion):** `feat/plane-1-ingestion`
+   * **Plane 4 (Integrity):** `feat/plane-4-integrity`
+   * **Plane 2 (Data Plane):** `feat/plane-2-data-plane`
+   * **Plane 3 (Control Plane):** `feat/plane-3-control-plane`
+   * **Plane 5 (Presentation):** `feat/plane-5-presentation`
+3. **Correction & Refactor Rule:** Any incorrect build, regression, or design deviation requires spinning up a dedicated fix branch (e.g. `fix/plane-1-buffer-leak`) rather than patching over failures on feature branches.
+
+### B. Strict Bottom-to-Top Module Hierarchy
+Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested foundation before the next is written:
+
+```
+[Layer 5] Presentation Plane (TUI + SIEM Dashboards)           ^  TOP
+    ^                                                          |
+[Layer 3] Control Plane (Brain: Drain3 + Open Jev + Ollama)    |
+    ^                                                          |
+[Layer 2] Data Plane (VRL Mapper + Router + OCSF Serialization)|
+    ^                                                          |
+[Layer 4] Integrity Plane (BLAKE3 Hashing + Parquet Vault)     |
+    ^                                                          |
+[Layer 1] Ingestion Plane (UDP/QUIC Sockets + Zero-Copy Slab)  |  BOTTOM (START HERE)
+```
+
+### C. "No Mocking" Real-Life Testing Protocol
+* **Zero Dummy Mocks:** Every module must be aggressively tested against actual, real-world formats (real Cisco ASA syslog strings, real Fortinet key-value lines, real Palo Alto CSVs, real network packets).
+* **Test Gates Before Merging:** Each module requires:
+  1. *Unit Tests:* Direct byte manipulation, boundary cases, malformed log lines.
+  2. *Integration Tests:* Sending live UDP datagrams to `127.0.0.1:514` and asserting byte preservation.
+  3. *Performance / Leak Tests:* Stressing the zero-copy buffer under high loop rates to verify zero memory creep.
 
 ---
 
-## 6. How the Next Agent Should Resume
+## 6. Iterative Implementation Roadmap (Bottom to Top)
 
-Simply start the new chat with:
-> "Read `HANDOFF_SESSION.md` in `/mnt/work/projects/sih/prism` and let's begin Phase 1: Cargo Workspace initialization and `prism-ingest` UDP listener implementation."
+### Phase 1: Ingestion Plane (`feat/plane-1-ingestion`)
+* **Target:** `crates/prism-ingest` & `crates/prism-common`
+* **Modules:**
+  1. `common`: Core types (`RawLogPayload`, `LogSource`, `IngestConfig`).
+  2. `buffer`: Zero-copy buffer management via `bytes::BytesMut` / `slab`.
+  3. `listener`: Async `tokio::net::UdpSocket` listening on port 514.
+  4. `dispatcher`: High-throughput lock-free `flume` channel dispatching `&[u8]`.
+* **Testing Gate:** Blast 10,000 real raw syslog lines over UDP; assert 100% packet arrival with 0 heap reallocations.
+
+### Phase 2: Integrity Plane (`feat/plane-4-integrity`)
+* **Target:** `crates/prism-provenance`
+* **Modules:**
+  1. `hasher`: BLAKE3 SIMD in-flight hashing on the incoming `&[u8]` slice.
+  2. `vault`: Apache Parquet writer with `zstd` compression batching raw payloads.
+  3. `merkle`: 16-level Merkle tree generating 60-second root hashes.
+* **Testing Gate:** Feed real attack flow logs; verify Merkle root matches; intentionally mutate 1 byte in a Parquet record and assert the audit check immediately fails.
+
+### Phase 3: Data Plane (`feat/plane-2-data-plane`)
+* **Target:** `crates/prism-core`
+* **Modules:**
+  1. `router`: Microsecond heuristic byte-pattern vendor classifier.
+  2. `vrl`: Datadog VRL execution engine with Fortinet & Cisco ASA ASTs.
+  3. `ocsf`: Class 4001 Network Activity schema serialization with provenance hash injected.
+  4. `dlq`: Dead Letter Queue file sink (`dlq.log`) for unrecognized/failed logs.
+  5. `sink`: HTTP Bulk Exporter (`reqwest`) pushing to SIEM.
+* **Testing Gate:** Ingest 50,000 mixed real Cisco/FortiGate logs; verify output strictly validates against OCSF JSON schema; verify unrecognized logs route to `dlq.log`.
+
+### Phase 4: Control Plane (`feat/plane-3-control-plane`)
+* **Target:** `prism-brain/` (Python)
+* **Modules:**
+  1. `watcher`: File watchdog detecting entries in `dlq.log`.
+  2. `cluster`: Drain3 fixed-depth tree grouping raw logs into templates.
+  3. `triage`: Open Jev (System 1) zero-shot classification for device type.
+  4. `coder`: Ollama (System 2) Llama-3 generating VRL remap scripts and router signatures.
+  5. `hitl`: Human-in-the-Loop review loop triggering hot-reload in `prism-core`.
+* **Testing Gate:** Feed an alien log format (e.g. NGINX access log); verify Drain3 creates 1 template; verify Open Jev classifies as Web Proxy; verify Ollama produces valid VRL; verify hot-reload works without restarting Rust.
+
+### Phase 5: Presentation & Observability (`feat/plane-5-presentation`)
+* **Target:** `crates/prism-tui` & `docker-compose.yml`
+* **Modules:**
+  1. `tui`: Ratatui 4-pane terminal engine room (Live EPS, DLQ rate, Merkle ticker, HitL approval).
+  2. `siem`: Docker Compose setup with Elasticsearch & Kibana reading PRISM's OCSF output.
+* **Testing Gate:** Run full end-to-end pipeline with split-screen showing Ratatui TUI live stats and Kibana live threat maps simultaneously.
+
+---
+
+## 7. How to Resume in the New Chat
+
+Start the new chat with:
+> **"Read `HANDOFF_SESSION.md`. We are following strict bottom-to-top development on dedicated branches with no mocks. Checkout `feat/plane-1-ingestion` and let's begin Phase 1: Cargo Workspace setup and `prism-ingest` zero-copy UDP listener with real syslog test cases."**
