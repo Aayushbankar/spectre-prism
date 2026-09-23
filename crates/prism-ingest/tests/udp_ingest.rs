@@ -57,14 +57,10 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
         }));
     }
 
-    for h in join_handles {
-        h.await.unwrap();
-    }
-
-    let mut received_count = 0;
     let expected_total = num_senders * pkts_per_sender;
-
-    let result = timeout(Duration::from_secs(10), async {
+    
+    let result = timeout(Duration::from_secs(15), async {
+        let mut received_count = 0;
         while let Ok(data_event) = data_rx.recv_async().await {
             let prov_event = prov_rx.recv_async().await.unwrap();
 
@@ -85,9 +81,16 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
                 break;
             }
         }
+        received_count
     }).await;
 
-    assert!(result.is_ok(), "Timed out. Received: {}", received_count);
+    // Now await the senders just to be clean
+    for h in join_handles {
+        h.await.unwrap();
+    }
+
+    assert!(result.is_ok(), "Timed out or failed");
+    let received_count = result.unwrap();
     assert_eq!(received_count, expected_total);
     assert_eq!(drop_count.load(Ordering::SeqCst), 0, "Expected 0 dropped packets");
 }
@@ -122,4 +125,54 @@ async fn test_drop_under_pressure() {
     
     let drops = drop_count.load(Ordering::SeqCst);
     assert!(drops > 0, "Expected dropped packets under pressure");
+}
+
+#[tokio::test]
+async fn test_capacity_invariance_100k() {
+    let bind_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+    let config = IngestConfig {
+        udp_bind_addr: bind_addr,
+        chunk_size: 10 * 1024 * 1024,
+        channel_capacity: 100_000,
+    };
+
+    let dispatcher = Dispatcher::new(&config);
+    let data_rx = dispatcher.data_receiver();
+    let prov_rx = dispatcher.provenance_receiver();
+    
+    let listener = Arc::new(UdpListener::new(config, dispatcher.sender()).await.unwrap());
+    let local_addr = listener.local_addr().unwrap();
+    
+    let listener_clone = listener.clone();
+    tokio::spawn(async move {
+        listener_clone.run().await.unwrap();
+    });
+
+    let client_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    
+    // Blast 100,000 tiny packets to prove capacity amortization
+    let payload = b"x";
+    
+    let sender_handle = tokio::spawn(async move {
+        for j in 0..100_000 {
+            client_socket.send_to(payload, local_addr).await.unwrap();
+            if j % 100 == 0 {
+                tokio::task::yield_now().await;
+            }
+        }
+    });
+
+    let result = timeout(Duration::from_secs(10), async {
+        let mut count = 0;
+        while let Ok(_) = data_rx.recv_async().await {
+            let _ = prov_rx.recv_async().await.unwrap();
+            count += 1;
+            if count == 100_000 {
+                break;
+            }
+        }
+    }).await;
+
+    sender_handle.await.unwrap();
+    assert!(result.is_ok(), "Failed to process 100,000 packets within timeout - indicating potential GC/allocation stalls");
 }

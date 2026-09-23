@@ -60,7 +60,12 @@ where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    Ok(Bytes::from(s.into_bytes()))
+    use base64::Engine;
+    // Attempt to decode as base64 first. If it fails, it was likely serialized as plain UTF-8.
+    match base64::engine::general_purpose::STANDARD.decode(&s) {
+        Ok(decoded) => Ok(Bytes::from(decoded)),
+        Err(_) => Ok(Bytes::from(s.into_bytes())),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,11 +87,38 @@ pub struct OcsfNetworkActivity {
     pub category_uid: u32,
     pub class_uid: u32,
     pub severity_id: u32,
+    pub severity: String,
     pub status_id: u32,
+    pub confidence: u32,
+    pub type_uid: u32,
     pub time: i64,
     pub src_endpoint: Endpoint,
     pub dst_endpoint: Endpoint,
     pub observables: Vec<String>,
     pub raw_data: Option<String>,
     pub metadata: VaultMetadata,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+
+    #[test]
+    fn test_raw_event_serialization_roundtrip() {
+        let event = RawEvent {
+            payload: Bytes::from(vec![0xff, 0xfe, 0xfd]),
+            metadata: ProvenanceMeta {
+                hash: blake3::hash(&[0xff, 0xfe, 0xfd]),
+                timestamp: Utc::now(),
+                source: LogSource::Unknown,
+            }
+        };
+
+        let json = serde_json::to_string(&event).unwrap();
+        let decoded: RawEvent = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(event.payload, decoded.payload);
+        assert_eq!(event.metadata.hash, decoded.metadata.hash);
+    }
 }

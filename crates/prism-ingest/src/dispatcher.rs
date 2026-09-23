@@ -66,8 +66,14 @@ impl DispatcherSender {
         
         let event_clone = event.clone();
         
-        let _ = self.data_tx.try_send(event);
-        let _ = self.provenance_tx.try_send(event_clone);
+        if self.data_tx.try_send(event).is_err() {
+            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            return Err(BroadcastError);
+        }
+        if self.provenance_tx.try_send(event_clone).is_err() {
+            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            return Err(BroadcastError);
+        }
         
         Ok(())
     }
