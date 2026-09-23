@@ -88,8 +88,9 @@ async fn test_integrity_plane_success() {
         assert!(ledger_contents.contains(&expected_hash), "Ledger missing hash {}", expected_hash);
     }
     
+    // Order-sensitive correlation: sort parquet files deterministically, then compare ordered roots
+    parquet_files.sort();
     let mut audit_roots = vec![];
-    
     for parquet_file in &parquet_files {
         let file = File::open(parquet_file).unwrap();
         let reader = SerializedFileReader::new(file).unwrap();
@@ -104,16 +105,11 @@ async fn test_integrity_plane_success() {
                 }
             }
         }
-        
         let audit_root = audit_vault_file(parquet_file.to_str().unwrap()).unwrap();
         audit_roots.push(hex::encode(audit_root));
     }
-    
-    let mut ledger_roots: Vec<String> = ledger_lines.iter().map(|l| l.split(',').nth(1).unwrap().to_string()).collect();
-    
-    audit_roots.sort();
-    ledger_roots.sort();
-    assert_eq!(audit_roots, ledger_roots);
+    let ledger_roots: Vec<String> = ledger_lines.iter().map(|l| l.split(',').nth(1).unwrap().to_string()).collect();
+    assert_eq!(audit_roots, ledger_roots, "Ledger order must match vault order (sequential chain-of-custody)");
 }
 
 #[tokio::test]

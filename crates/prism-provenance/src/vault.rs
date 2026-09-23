@@ -19,6 +19,7 @@ pub struct VaultWriter {
     batch_size: usize,
     output_dir: String,
     current_batch: usize,
+    file_counter: u64,
 }
 
 impl VaultWriter {
@@ -43,6 +44,7 @@ impl VaultWriter {
             batch_size,
             output_dir: output_dir.to_string(),
             current_batch: 0,
+            file_counter: 0,
         })
     }
 
@@ -82,8 +84,9 @@ impl VaultWriter {
             .set_writer_version(WriterVersion::PARQUET_2_0)
             .build();
 
-        let filename = format!("{}/{}.parquet", self.output_dir, uuid::Uuid::new_v4());
+        let filename = format!("{}/{:05}_{}.parquet", self.output_dir, self.file_counter, uuid::Uuid::new_v4());
         let file = File::create(&filename)?;
+        self.file_counter += 1;
         
         let mut writer = ArrowWriter::try_new(file, self.schema.clone(), Some(props))?;
         writer.write(&batch)?;
