@@ -66,3 +66,5 @@ root_ledger.json
 .DS_Store
 Thumbs.db
 *.bak
+*.log
+*.jsonl
