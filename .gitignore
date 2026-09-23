@@ -49,6 +49,8 @@ dlq.log
 /data/
 /scratch/
 *.parquet
+test_vault_*
+ledger.log
 root_ledger.json
 
 # Environment & Secrets
