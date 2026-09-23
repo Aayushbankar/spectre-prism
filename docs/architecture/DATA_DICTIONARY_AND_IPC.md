@@ -11,9 +11,21 @@ To maintain zero-copy speeds in the Data Plane and air-gapped security in the Co
 ### A. Rust -> Python (The Dead Letter Queue)
 When `prism-core` (Rust) encounters an unknown log, it appends it to `dlq.log`.
 * **Path:** `/var/run/prism/dlq.log` (test `/tmp/prism_dlq.log`)
-* **Format:** Plaintext Append
-* **Schema:** `[TIMESTAMP] REASON=<reason> PAYLOAD=<utf8_string>`
-* **Trigger:** `prism-brain` (Python) monitors this file using `watchdog`.
+* **Format:** JSON Lines (JSONL) for IPC, alongside a Plaintext replica for TUI.
+* **Schema:** 
+```json
+{
+  "raw_payload": "utf8:<UNRECOGNIZED_LOG_STRING>",
+  "metadata": {
+    "hash": "a1b2c3d4...",
+    "timestamp": "2026-09-22T10:15:00Z",
+    "source": { "Udp": "192.168.1.100:514" }
+  }
+}
+```
+* **Note:** `raw_payload` is strictly prefixed with `utf8:` or `b64:` to prevent heuristic base64 decoding corruption on binary syslogs.
+* **Dual-Write Note:** `dlq.rs` writes plaintext `[TIMESTAMP] REASON PAYLOAD` for the Presentation TUI, and simultaneously writes `.jsonl` for the Python IPC.
+* **Trigger:** `prism-brain` (Python) monitors the `.jsonl` file using `watchdog`.
 
 ### B. Python -> Rust (The Rule Hot-Reload)
 When `prism-brain` successfully generates a new parser, it writes a `.vrl` script and a `.yaml` signature file.
