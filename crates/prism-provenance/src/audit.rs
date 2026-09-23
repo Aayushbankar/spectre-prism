@@ -30,7 +30,7 @@ pub fn audit_vault_file(path: &str) -> Result<[u8; 32]> {
             
             // Add to Merkle Tree
             let hash = blake3::Hash::from_hex(recorded_hash_hex).map_err(|e| anyhow::anyhow!("Invalid hex hash: {}", e))?;
-            tree.push_leaf(&hash);
+            tree.push_leaf(&hash)?;
         }
     }
     

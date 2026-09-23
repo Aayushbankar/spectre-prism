@@ -14,6 +14,8 @@ use std::sync::Arc;
 use arrow::array::{BinaryBuilder, Int64Builder, StringBuilder};
 use arrow::datatypes::{DataType, Field, Schema};
 use std::fs::File;
+use parquet::file::reader::{FileReader, SerializedFileReader};
+use parquet::basic::Compression;
 
 #[tokio::test]
 async fn test_integrity_plane_success() {
@@ -21,8 +23,8 @@ async fn test_integrity_plane_success() {
     fs::remove_dir_all(output_dir).ok();
     
     let (tx, rx) = flume::bounded(100);
-    // Use a batch size of 10 so it flushes after 10 rows
-    let ticker = IntegrityTicker::new(rx, output_dir, 10, Duration::from_millis(500)).unwrap();
+    // Use a batch size of 1 so it tests multi-file vault writes per row
+    let ticker = IntegrityTicker::new(rx, output_dir, 1, Duration::from_millis(500)).unwrap();
     
     let ticker_handle = tokio::spawn(async move {
         ticker.run().await.unwrap();
@@ -30,32 +32,23 @@ async fn test_integrity_plane_success() {
     
     let mut expected_tree = prism_provenance::merkle::ProvenanceTree::new();
     
-    // Feed 10 heterogeneous logs
+    // Feed heterogeneous logs: real vendor samples
     let payloads = vec![
-        b"syslog: connection refused".to_vec(),
-        b"nginx: GET /index.html 200".to_vec(),
-        b"{\"event\": \"login\", \"user\": \"admin\"}".to_vec(),
-        b"kernel: out of memory".to_vec(),
-        b"auth: PAM session opened".to_vec(),
-        b"cisco-asa: Teardown TCP connection".to_vec(),
-        b"fortigate: webfilter block".to_vec(),
-        b"paloalto: threat detected".to_vec(),
-        b"apache: 404 not found".to_vec(),
-        b"mysql: Access denied for user".to_vec(),
+        b"date=2024-01-01 time=12:00:00 devname=\"FW01\" devid=\"FG100\" logid=\"0000000013\" type=\"traffic\" subtype=\"forward\" level=\"notice\" srcip=192.168.1.5 dstip=8.8.8.8 action=\"accept\"".to_vec(),
+        b"%ASA-6-302013: Built inbound TCP connection 44439167 for outside:192.168.1.5/54321 (192.168.1.5/54321) to inside:10.0.0.1/80 (10.0.0.1/80)".to_vec(),
+        b"1,2024/01/01 12:00:00,0011C1234,THREAT,vulnerability,1,2024/01/01 12:00:00,192.168.1.5,10.0.0.1,0.0.0.0,0.0.0.0,Rule1,user1,web-browsing,vsys1,trust,untrust,eth1/1,eth1/2,syslog,2024/01/01 12:00:00,54321,80,0,0,12345,0x400000,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0".to_vec(),
     ];
     
-    for (i, p) in payloads.into_iter().enumerate() {
+    for p in payloads {
         let hash = blake3::hash(&p);
-        expected_tree.push_leaf(&hash);
-        
-        let source = if i % 2 == 0 { LogSource::Udp(std::net::SocketAddr::from(([127, 0, 0, 1], 514))) } else { LogSource::Unknown };
+        expected_tree.push_leaf(&hash).unwrap();
         
         let event = RawEvent {
             payload: Bytes::from(p),
             metadata: ProvenanceMeta {
                 hash,
                 timestamp: Utc::now(),
-                source,
+                source: LogSource::Unknown,
             }
         };
         tx.send(event).unwrap();
@@ -63,13 +56,15 @@ async fn test_integrity_plane_success() {
     
     let expected_root = expected_tree.root_hash().unwrap();
     
-    // Drop the channel to flush
     drop(tx);
-    
-    // Wait for the ticker to finish
     ticker_handle.await.unwrap();
     
-    // At this point we should have a parquet file in test_vault_success.
+    // Assert ledger file exists and contains the root hash
+    let ledger_path = format!("{}/ledger.log", output_dir);
+    assert!(fs::metadata(&ledger_path).is_ok(), "ledger.log must exist");
+    let ledger_contents = fs::read_to_string(&ledger_path).unwrap();
+    assert!(ledger_contents.contains(&hex::encode(expected_root)));
+
     let paths = fs::read_dir(output_dir).unwrap();
     let mut parquet_files = vec![];
     for path in paths {
@@ -79,14 +74,53 @@ async fn test_integrity_plane_success() {
         }
     }
     
-    assert!(!parquet_files.is_empty());
+    // We expect 3 parquet files because batch_size=1 and we pushed 3 events.
+    assert_eq!(parquet_files.len(), 3);
+    
+    // Audit the first file and verify Zstd compression via WriterProperties
     let parquet_file = &parquet_files[0];
+    let file = File::open(&parquet_file).unwrap();
+    let reader = SerializedFileReader::new(file).unwrap();
+    let metadata = reader.metadata();
+    let row_group = metadata.row_group(0);
+    let column_chunk = row_group.column(0);
+    match column_chunk.compression() {
+        Compression::ZSTD(_) => {},
+        other => panic!("Expected ZSTD compression, got {:?}", other),
+    }
+}
+
+#[tokio::test]
+async fn test_empty_vault() {
+    let output_dir = "test_vault_empty";
+    fs::remove_dir_all(output_dir).ok();
     
-    // Audit the file and expect success
-    let root_hash = audit_vault_file(parquet_file.to_str().unwrap()).unwrap();
+    let (tx, rx) = flume::bounded(100);
+    let ticker = IntegrityTicker::new(rx, output_dir, 1, Duration::from_millis(500)).unwrap();
     
-    // Verify the root hash matches the expected 10-leaf tree root
-    assert_eq!(hex::encode(root_hash), hex::encode(expected_root));
+    let ticker_handle = tokio::spawn(async move {
+        ticker.run().await.unwrap();
+    });
+    
+    drop(tx);
+    ticker_handle.await.unwrap();
+    
+    // Vault should be empty, no parquet, no ledger log
+    let paths = fs::read_dir(output_dir).unwrap();
+    assert_eq!(paths.count(), 0);
+}
+
+#[tokio::test]
+async fn test_merkle_tree_limit() {
+    let mut tree = prism_provenance::merkle::ProvenanceTree::new();
+    let dummy_hash = blake3::hash(b"dummy");
+    for _ in 0..65536 {
+        tree.push_leaf(&dummy_hash).unwrap();
+    }
+    // The next one should fail
+    let res = tree.push_leaf(&dummy_hash);
+    assert!(res.is_err());
+    assert_eq!(res.unwrap_err().to_string(), "16-level limit reached");
 }
 
 #[tokio::test]

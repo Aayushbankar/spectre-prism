@@ -11,6 +11,7 @@ pub struct IntegrityTicker {
     tree: ProvenanceTree,
     vault: VaultWriter,
     tick_interval: Duration,
+    output_dir: String,
 }
 
 impl IntegrityTicker {
@@ -21,6 +22,7 @@ impl IntegrityTicker {
             tree: ProvenanceTree::new(),
             vault,
             tick_interval,
+            output_dir: output_dir.to_string(),
         })
     }
 
@@ -35,7 +37,7 @@ impl IntegrityTicker {
                 event_res = self.rx.recv_async() => {
                     match event_res {
                         Ok(event) => {
-                            self.tree.push_leaf(&event.metadata.hash);
+                            self.tree.push_leaf(&event.metadata.hash)?;
                             self.vault.append(&event)?;
                         }
                         Err(_) => {
@@ -54,9 +56,10 @@ impl IntegrityTicker {
         if !self.tree.is_empty() {
             if let Some(root) = self.tree.root_hash() {
                 let root_hex = hex::encode(root);
-                println!("60s Ticker: Merkle Root Hash: {}", root_hex);
+                println!("{:?} Ticker: Merkle Root Hash: {}", self.tick_interval, root_hex);
                 // Ledger write
-                if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("ledger.log") {
+                let ledger_path = format!("{}/ledger.log", self.output_dir);
+                if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open(&ledger_path) {
                     use std::io::Write;
                     let _ = writeln!(file, "{},{}", chrono::Utc::now().to_rfc3339(), root_hex);
                 }
