@@ -80,7 +80,7 @@
 
 *   **Planes 1, 2, 4 & TUI:** **Rust** (Edition 2021)
     *   *Async runtime:* `tokio` (full features)
-    *   *Memory:* `bytes`, `slab`, `flume` (MPSC channels)
+    *   *Memory:* `bytes`, `flume` (MPSC channels)
     *   *Transformation:* `vrl` (Vector Remap Language), `serde`, `serde_json`
     *   *Integrity:* `blake3`, `parquet`, `arrow`, `rs-merkle`
     *   *Network & Exporter:* `quinn` (QUIC), `reqwest` (HTTP Bulk)
@@ -161,7 +161,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
     ^                                                          |
 [Layer 4] Integrity Plane (BLAKE3 Hashing + Parquet Vault)     |
     ^                                                          |
-[Layer 1] Ingestion Plane (UDP/QUIC Sockets + Zero-Copy Slab)  |  BOTTOM (START HERE)
+[Layer 1] Ingestion Plane (UDP/QUIC Sockets + Zero-Copy Blocks) |  BOTTOM (START HERE)
 ```
 
 ### C. "No Mocking" Real-Life Testing Protocol

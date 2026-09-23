@@ -223,7 +223,7 @@ Per the SIH26156 Problem Statement mandate (*"Technical Presentation (Max 5 Slid
 - **Garbage Collection Pauses:** Exactly **0.00 ms** (Compile-time deterministic RAII).
 
 #### 4. Speaker Notes & Anticipated Jury Defense
-- **Speaker Delivery:** "Let us look at the microarchitecture of the Data Plane. By utilizing a pre-allocated Slab Allocator and AVX-512 SIMD vectorization, we consume just 3,500 CPU clock cycles per log. That is why a single 8-core commodity server running PRISM outperforms 30 Logstash nodes combined."
+- **Speaker Delivery:** "Let us look at the microarchitecture of the Data Plane. By utilizing a pre-allocated Amortized Block Allocator and AVX-512 SIMD vectorization, we consume just 3,500 CPU clock cycles per log. That is why a single 8-core commodity server running PRISM outperforms 30 Logstash nodes combined."
 - **Anticipated Jury Question:** *"How does PRISM handle memory exhaustion if downstream SIEM sinks back up?"*
 - **Defense Answer:** "PRISM implements adaptive backpressure across its internal bounded `flume` channels. When channel high-water marks are reached, socket read loops pause, prioritizing writing raw byte streams to the Parquet vault. Incoming UDP buffers back up into kernel socket queues rather than causing user-space memory thrashing."
 

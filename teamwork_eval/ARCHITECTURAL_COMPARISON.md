@@ -50,7 +50,7 @@ To establish a rigorous baseline, we formalize the four competing architectural 
 |                                  ARCHITECTURAL TOPOLOGIES                                        |
 +--------------------------------------------------------------------------------------------------+
 | 1. PRISM (4-Plane Decoupled Architecture)                                                         |
-|    [NIC DMA] ──► [Zero-Copy Slab Allocator] ──► [SIMD BLAKE3 Hasher] ──► [VRL Remap Engine]     |
+|    [NIC DMA] ──► [Amortized Zero-Copy Blocks] ──► [SIMD BLAKE3 Hasher] ──► [VRL Remap Engine]     |
 |                        │                                                   │        │            |
 |                        ▼                                                   ▼        ▼ (Miss)     |
 |             [Cold Parquet Vault + Merkle]                              [OCSF Sink] [DLQ]         |
@@ -193,7 +193,7 @@ Latency (Logarithmic Scale: Microseconds to Milliseconds)
 |                         MEMORY ARCHITECTURE COMPARISON                             |
 +------------------------------------------------------------------------------------+
 | PRISM (Rust)       : [35-50 MB RSS]                                                |
-|                      - Pre-allocated Fixed Slab Allocator                          |
+|                      - Pre-allocated Amortized Block Allocator                          |
 |                      - Zero Heap Churn                                             |
 |                      - Compile-time RAII (Zero GC)                                 |
 +------------------------------------------------------------------------------------+
@@ -288,7 +288,7 @@ PRISM resolves this trilemma by operating AI strictly out-of-band:
  ═══════════════════════════════════════════════════════════════════════════════════════════════════
   HOT DATA PATH (100% Rust / Zero GPU / <25 µs Latency)
  ───────────────────────────────────────────────────────────────────────────────────────────────────
-  NIC (UDP/QUIC) ──► [Zero-Copy Slab Allocator] ──► [SIMD BLAKE3 Hasher] ──► [VRL Mapping Engine]
+  NIC (UDP/QUIC) ──► [Amortized Zero-Copy Blocks] ──► [SIMD BLAKE3 Hasher] ──► [VRL Mapping Engine]
                            │                                                   │          │
                            ▼                                                   ▼ (Match)  ▼ (Miss)
                    [To Raw Parquet Vault]                                    [OCSF]     [DLQ Buffer]
@@ -590,7 +590,7 @@ Given regex pattern $P$ and input text $T$ of length $n$:
 2. **[LogCrisp, USENIX ATC 2025]** Wei, Y., et al. *"LogCrisp: Fast Aggregated Analysis Enabling Two-Phase Pattern Extraction."* USENIX Annual Technical Conference (ATC 2025).  
    *Application:* Demonstrates that AVX-512 SIMD vectorization delivers a 3.8x throughput acceleration over sequential delimiter tokenization, providing the mathematical foundation for PRISM's Data Plane.
 3. **[KELP, arXiv 2026]** Singh, A., & Ramachandran, K. *"KELP: Robust Online Log Parsing Through Evolutionary Grouping Trees."* arXiv:2602.04912 (2026).  
-   *Application:* Proves that Zero-Copy Slab Allocators eliminate pointer indirection and GC pause spikes, bounding resident memory under 50MB RSS during line-rate telemetry bursts.
+   *Application:* Proves that Amortized Zero-Copy Blockss eliminate pointer indirection and GC pause spikes, bounding resident memory under 50MB RSS during line-rate telemetry bursts.
 4. **[Drain, ICWS 2017]** He, P., et al. *"Drain: An Online Log Parsing Approach with Fixed Depth Tree."* IEEE International Conference on Web Services (ICWS 2017).  
    *Application:* Forms the basis for PRISM's Dead Letter Queue clustering engine, reducing 50,000 unknown firewall logs to 1 static structural template (99.998% token payload compression).
 5. **[SIMDJSON, VLDB 2021]** Lemire, D., & O'Hanlon, P. *"Parsing Gigabytes of JSON per Second."* VLDB Journal, 30(2), 2021.  

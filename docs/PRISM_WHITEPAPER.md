@@ -23,7 +23,7 @@ The industry fails because it faces the **Latency-Cost Trilemma**: Regex is fast
 ![System Architecture Overview](images/arch.png)
 
 ### Plane 1: The Ingestion Plane (The Catcher)
-* **Function:** Bind to UDP, TCP, and Next-Gen QUIC ports. Captures data into a Zero-Copy memory pool (Slab Allocator) to prevent memory allocator bottlenecking.
+* **Function:** Bind to UDP, TCP, and Next-Gen QUIC ports. Captures data into a Zero-Copy memory pool (Amortized BytesMut Blocks) to prevent memory allocator bottlenecking.
 * **Integrity Hook:** Every raw byte slice is hashed via BLAKE3 (SIMD parallelized, FIPS-configurable) instantly.
 
 ### Plane 2: The Data Plane (The Muscle)
