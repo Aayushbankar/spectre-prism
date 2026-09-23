@@ -126,6 +126,8 @@ In the new chat, transition directly from the Waterfall Design phase into **Iter
    members = [
        "crates/prism-common",
        "crates/prism-ingest",
+       "crates/prism-provenance",
+       "crates/prism-core",
    ]
    ```
 2. **Build `prism-common`:** Shared data structures (`RawEvent`, `ProvenanceMeta`, `OcsfNetworkActivity`, `Blake3Hash`).
