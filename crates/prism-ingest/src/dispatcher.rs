@@ -1,6 +1,8 @@
 use flume::{Receiver, Sender};
 use prism_common::RawEvent;
 use crate::common::IngestConfig;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 pub struct Dispatcher {
     data_tx: Sender<RawEvent>,
@@ -8,6 +10,8 @@ pub struct Dispatcher {
     
     provenance_tx: Sender<RawEvent>,
     provenance_rx: Receiver<RawEvent>,
+    
+    drop_count: Arc<AtomicU64>,
 }
 
 impl Dispatcher {
@@ -17,7 +21,8 @@ impl Dispatcher {
         
         Self { 
             data_tx, data_rx,
-            provenance_tx, provenance_rx
+            provenance_tx, provenance_rx,
+            drop_count: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -25,6 +30,7 @@ impl Dispatcher {
         DispatcherSender {
             data_tx: self.data_tx.clone(),
             provenance_tx: self.provenance_tx.clone(),
+            drop_count: self.drop_count.clone(),
         }
     }
 
@@ -35,31 +41,34 @@ impl Dispatcher {
     pub fn provenance_receiver(&self) -> Receiver<RawEvent> {
         self.provenance_rx.clone()
     }
+    
+    pub fn drop_count(&self) -> Arc<AtomicU64> {
+        self.drop_count.clone()
+    }
 }
 
 #[derive(Clone)]
 pub struct DispatcherSender {
     data_tx: Sender<RawEvent>,
     provenance_tx: Sender<RawEvent>,
+    drop_count: Arc<AtomicU64>,
 }
 
-impl DispatcherSender {
-    pub async fn broadcast(&self, event: RawEvent) -> Result<(), flume::SendError<RawEvent>> {
-        // Clone for the second channel. `Bytes` clone is cheap (O(1)).
-        let event_clone = event.clone();
-        
-        let data_res = self.data_tx.send_async(event).await;
-        let prov_res = self.provenance_tx.send_async(event_clone).await;
-        
-        data_res.and(prov_res)
-    }
+#[derive(Debug)]
+pub struct BroadcastError;
 
-    pub fn try_broadcast(&self, event: RawEvent) -> Result<(), flume::TrySendError<RawEvent>> {
+impl DispatcherSender {
+    pub fn try_broadcast(&self, event: RawEvent) -> Result<(), BroadcastError> {
+        if self.data_tx.is_full() || self.provenance_tx.is_full() {
+            self.drop_count.fetch_add(1, Ordering::Relaxed);
+            return Err(BroadcastError);
+        }
+        
         let event_clone = event.clone();
         
-        let data_res = self.data_tx.try_send(event);
-        let prov_res = self.provenance_tx.try_send(event_clone);
+        let _ = self.data_tx.try_send(event);
+        let _ = self.provenance_tx.try_send(event_clone);
         
-        data_res.and(prov_res)
+        Ok(())
     }
 }

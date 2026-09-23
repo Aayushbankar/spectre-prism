@@ -5,6 +5,7 @@ use prism_common::LogSource;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tokio::time::{timeout, Duration};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 #[tokio::test]
@@ -12,13 +13,14 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
     let bind_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
     let config = IngestConfig {
         udp_bind_addr: bind_addr,
-        buffer_size: 10 * 1024 * 1024,
+        chunk_size: 10 * 1024 * 1024,
         channel_capacity: 50_000,
     };
 
     let dispatcher = Dispatcher::new(&config);
-    // Use data_receiver (representing plane 2)
-    let receiver = dispatcher.data_receiver();
+    let data_rx = dispatcher.data_receiver();
+    let prov_rx = dispatcher.provenance_receiver();
+    let drop_count = dispatcher.drop_count();
     
     let listener = Arc::new(UdpListener::new(config, dispatcher.sender()).await.unwrap());
     let local_addr = listener.local_addr().unwrap();
@@ -29,17 +31,19 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
     });
 
     let num_senders = 10;
-    let pkts_per_sender = 2000; // 20k total
+    let pkts_per_sender = 2000;
     let mut join_handles = vec![];
 
+    let start_time = chrono::Utc::now();
+
     let payloads: Vec<&[u8]> = vec![
-        b"<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - 'su root' failed for lonvick on /dev/pts/8", // RFC5424
-        b"%ASA-6-302013: Built inbound TCP connection 2343234 for outside:10.1.1.1/1234 (10.1.1.1/1234)", // Cisco ASA
-        b"date=2020-01-01 time=12:34:56 devname=FW01 devid=FGT60C123456 logid=0000000013 type=traffic subtype=forward", // Fortinet KV
-        b"1,2019/01/01 10:00:00,001234567890,TRAFFIC,start,1,2019/01/01 10:00:00,10.0.0.1,10.0.0.2", // Palo Alto CSV
+        b"<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 - 'su root' failed for lonvick on /dev/pts/8",
+        b"%ASA-6-302013: Built inbound TCP connection 2343234 for outside:10.1.1.1/1234 (10.1.1.1/1234)",
+        b"date=2020-01-01 time=12:34:56 devname=FW01 devid=FGT60C123456 logid=0000000013 type=traffic subtype=forward",
+        b"1,2019/01/01 10:00:00,001234567890,TRAFFIC,start,1,2019/01/01 10:00:00,10.0.0.1,10.0.0.2",
     ];
 
-    for i in 0..num_senders {
+    for _ in 0..num_senders {
         let payloads = payloads.clone();
         join_handles.push(tokio::spawn(async move {
             let client_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
@@ -59,34 +63,22 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
 
     let mut received_count = 0;
     let expected_total = num_senders * pkts_per_sender;
-    let mut last_timestamp = chrono::Utc::now();
-    let mut initially_set = false;
 
-    // Use a longer timeout for CI stability
     let result = timeout(Duration::from_secs(10), async {
-        while let Ok(event) = receiver.recv_async().await {
-            // Verify payload integrity and hash
-            let expected_hash = blake3::hash(&event.payload);
-            assert_eq!(event.metadata.hash, expected_hash);
-            
-            // Verify LogSource
-            match event.source {
-                LogSource::Udp(_) => {},
-                _ => panic!("Expected UDP source"),
-            }
-            match event.metadata.source {
-                LogSource::Udp(_) => {},
-                _ => panic!("Expected UDP metadata source"),
-            }
+        while let Ok(data_event) = data_rx.recv_async().await {
+            let prov_event = prov_rx.recv_async().await.unwrap();
 
-            // Verify monotonicity (within reason, since concurrent, but single listener loop is monotonic)
-            if !initially_set {
-                last_timestamp = event.timestamp;
-                initially_set = true;
-            } else {
-                assert!(event.timestamp >= last_timestamp, "Timestamps are not monotonic");
-                last_timestamp = event.timestamp;
-            }
+            assert!(payloads.contains(&&data_event.payload[..]), "Received unknown/corrupted payload");
+            assert_eq!(&data_event.payload[..], &prov_event.payload[..]);
+
+            let expected_hash = blake3::hash(&data_event.payload);
+            assert_eq!(data_event.metadata.hash, expected_hash);
+            assert_eq!(prov_event.metadata.hash, expected_hash);
+            
+            assert!(matches!(data_event.metadata.source, LogSource::Udp(_)));
+
+            let event_time = data_event.metadata.timestamp;
+            assert!(event_time >= start_time, "Timestamp from before test start");
 
             received_count += 1;
             if received_count == expected_total {
@@ -95,6 +87,39 @@ async fn test_udp_ingest_heterogeneous_concurrent() {
         }
     }).await;
 
-    assert!(result.is_ok(), "Timed out waiting for {} packets. Received: {}", expected_total, received_count);
+    assert!(result.is_ok(), "Timed out. Received: {}", received_count);
     assert_eq!(received_count, expected_total);
+    assert_eq!(drop_count.load(Ordering::SeqCst), 0, "Expected 0 dropped packets");
+}
+
+#[tokio::test]
+async fn test_drop_under_pressure() {
+    let bind_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+    let config = IngestConfig {
+        udp_bind_addr: bind_addr,
+        chunk_size: 10 * 1024 * 1024,
+        channel_capacity: 10, // Tiny capacity
+    };
+
+    let dispatcher = Dispatcher::new(&config);
+    let drop_count = dispatcher.drop_count();
+    
+    let listener = Arc::new(UdpListener::new(config, dispatcher.sender()).await.unwrap());
+    let local_addr = listener.local_addr().unwrap();
+    
+    let listener_clone = listener.clone();
+    tokio::spawn(async move {
+        listener_clone.run().await.unwrap();
+    });
+
+    let client_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let payload = b"short test message";
+    for _ in 0..100 {
+        client_socket.send_to(payload, local_addr).await.unwrap();
+    }
+
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    
+    let drops = drop_count.load(Ordering::SeqCst);
+    assert!(drops > 0, "Expected dropped packets under pressure");
 }
