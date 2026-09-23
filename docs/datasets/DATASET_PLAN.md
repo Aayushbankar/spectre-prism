@@ -42,3 +42,25 @@ To demonstrate the AI Control Plane (Brain), we will feed PRISM a completely for
 1. PRISM's Data Plane fails to match Cisco/Fortinet rules.
 2. 10,000 NGINX logs are dumped into the Dead Letter Queue (DLQ).
 3. The AI groups them, infers the schema, and auto-generates the VRL parser.
+
+
+## 4. Sources, Licensing & Verification
+
+### UNSW-NB15
+- **Official link:** https://research.unsw.edu.au/projects/unsw-nb15-dataset
+- **Format:** pcap + CSV (49 features)
+- **Citation required:** Moustafa, N., & Slay, J. (2015). *UNSW-NB15: a comprehensive data set for network intrusion detection systems.* MilCIS 2015, IEEE.
+
+### CIC-IDS-2017
+- **Official link:** https://www.unb.ca/cic/datasets/ids-2017.html
+- **Format:** pcap + CSV (80 features, via CICFlowMeter)
+- **Citation required:** Sharafaldin, I., Lashkari, A.H., & Ghorbani, A.A. (2018). *Toward Generating a New Intrusion Detection Dataset and Intrusion Traffic Characterization.* ICISSP 2018.
+
+### CSE-CIC-IDS2018
+- **Official link:** https://www.unb.ca/cic/datasets/ids-2018.html
+- **Mirror (AWS Open Data):** https://registry.opendata.aws/cse-cic-ids2018
+- **Format:** pcap + CSV
+- **Citation required:** Same authors/project as CIC-IDS-2017 (joint CIC + Communications Security Establishment project)
+
+### data.gov.in Check
+Searched India's official open data portal for cybersecurity/network log datasets. As expected given the OPSEC constraints stated above, no relevant real-world perimeter/security log dataset exists there — confirming the need for the academic + synthetic hybrid approach used in this plan.
