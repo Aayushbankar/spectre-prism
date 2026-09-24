@@ -22,7 +22,7 @@ class TriageEngine:
         engine = self.config.get("triage", {}).get("engine", "heuristic")
         
         if device == "cpu" or engine == "heuristic":
-            logger.info("Triage: heuristic (CPU-only)")
+            logger.info(f"Triage: heuristic (CPU-only) device={device}")
             return self._heuristic_fallback(template)
             
         try:

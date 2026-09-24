@@ -15,3 +15,10 @@ This document outlines the deployment configurations for various target platform
 * **Python:** `3.12` (Control Plane)
 * **LLM (Optional):** `Ollama` for local autonomous rule generation
 * **Packages:** `watchdog`, `drain3` (Base requirements)
+
+### Verification
+Ensure your dependencies are successfully linked by running:
+```bash
+pip show drain3
+```
+This should output the package metadata if successfully installed.
