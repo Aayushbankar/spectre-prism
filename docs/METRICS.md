@@ -1,8 +1,8 @@
 # PRISM — Real Runtime Metrics & Benchmark Ledger
 
-**Project:** PRISM SIH26156 NTRO ULPF | **Team:** SPECTRE | **Branch:** `main@90e7963` + `feat/plane-3-control-plane@06cffaa` | **Commit:** `f581fac→9598958` (Plane 2) / `2f4ee6d` (Plane 4) / `06cffaa` (Plane 3) / `90e7963` (main 4 planes) | **Timestamp (UTC):** `2026-09-24T10:54:17Z` (cargo test --workspace + pytest 15 passed 3 skipped) | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` `python 3.11.16` `drain3 0.9.11 laya 0.3.16` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core — CPU-only `device:cpu` `coder.enabled:false`
+**Project:** PRISM SIH26156 NTRO ULPF | **Team:** SPECTRE | **Branch:** `main@c05a505` + `feat/plane-5-presentation@849d79c` | **Commit:** `f581fac→9598958` (Plane 2) / `2f4ee6d` (Plane 4) / `06cffaa` (Plane 3) / `90e7963` (main 4 planes) | **Timestamp (UTC):** `2026-09-24T15:02:40Z` (cargo test --workspace + pytest 17 passed 3 skipped) | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` `python 3.11.16` `drain3 0.9.11 laya 0.3.16` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core — CPU-only `device:cpu` `coder.enabled:false`
 
-> This ledger stores **real, executed** metrics with citations to datasets, commits, and test harnesses. All numbers are from `cargo test --workspace` `13/13` Rust + `pytest prism-brain/tests` `15 passed 3 skipped` on `feat/plane-3-control-plane@06cffaa` merged to `main@90e7963`.
+> This ledger stores **real, executed** metrics with citations to datasets, commits, and test harnesses. All numbers are from `cargo test --workspace` `17/17` Rust + `pytest prism-brain/tests` `17 passed 3 skipped` on `feat/plane-3-control-plane@06cffaa` merged to `main@90e7963`.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | Scope | Tests | Result | Wall Time | Commit | Citation |
 |---|---|---|---|---|---|
-| `cargo test --workspace` | **13/13 Rust** `1 prism-common +3 prism-core (1 bench +2 int) +3 prism-ingest +6 prism-provenance` + **15 passed 3 skipped Python** `4 drain isolated +3 laya isolated +3 coder isolated +3 watcher/gatekeeper +3 bigdata +1 heuristic +1 gpu_skip` | `0` failures, `0` warnings | `~8s Rust` `4.05s bench +2.91s data +1.25s ingest +0.06s provenance` + `12.44s Python 15/18` `2026-09-24T10:54:17Z` | `90e7963` (main 4 planes) `06cffaa` (Plane3) | `Cargo.toml:3` 4 members, `HANDOFF_SESSION.md:120` `PR #5 #13 MERGED` |
+| `cargo test --workspace` | **17/17 Rust** `1 prism-common +3 prism-core (1 bench +2 int) +5 prism-ingest +6 prism-provenance +2 prism-tui` + **17 passed 3 skipped Python** `4 drain isolated +3 laya isolated +3 coder isolated +3 watcher/gatekeeper +3 bigdata +1 heuristic +1 gpu_skip` | `0` failures, `0` warnings | `~8s Rust` `4.05s bench +2.91s data +1.25s ingest +0.06s provenance` + `12.44s Python 15/18` `2026-09-24T10:54:17Z` | `90e7963` (main 4 planes) `06cffaa` (Plane3) | `Cargo.toml:3` 4 members, `HANDOFF_SESSION.md:120` `PR #5 #13 MERGED` |
 | `cargo clippy --workspace -- -D warnings` | `0` warnings | pass | `0.80s` | same | `crates/*/Cargo.toml` edition 2021 `prism-brain` `laya` optional |
 | `cargo check --workspace` | `0` warnings | pass | `2.16s` | same | `PR #5 #13 MERGED` |
 
@@ -72,7 +72,7 @@
 - **Commits:** `89ba280 #1 Plane1`, `2f4ee6d #4 Plane4`, `f581fac→9598958 Plane2 PR #5`, `90e7963 main 4 planes`, `0a22e3e L3 decoupled`, `06cffaa Task2 Laya`, `a9efc29 Task3 Coder`, `30965cd Task4 Watcher`, `d20f075 metrics` — `CHANGELOG.md:5` `0.8.0→1.0.0`
 - **Diagrams:** `docs/images/arch.png 38K 2026-09-23 12:12` `diagram.mmd` Amortized Blocks `tokio/quinn`
 
-**Combined:** `13 Rust + 15 Python = 28 tests` `0 failures` `3 skipped GPU/LLM` `0 clippy` `bare-metal x86_64 7.1.8-arch1-3 rustc 1.97.1 python 3.11.16` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes — `feat/plane-3-control-plane@06cffaa` decoupled Drain→Laya→Coder.
+**Combined:** `17 Rust + 17 Python = 34 tests` `0 failures` `3 skipped GPU/LLM` `0 clippy` `bare-metal x86_64 7.1.8-arch1-3 rustc 1.97.1 python 3.11.16` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes — `feat/plane-3-control-plane@06cffaa` decoupled Drain→Laya→Coder.
 
 ## Plane 3: Control Plane (prism-brain) — ✅ Complete `main@90e7963` via `feat/plane-3-control-plane@06cffaa+a9efc29+30965cd` PR #13 MERGED — Updated `2026-09-24T10:54:17Z`
 
@@ -96,10 +96,10 @@
 | `test_laya_vs_jev_vs_heuristic` `test_llama_coder` `test_e2e_52k_throughput` `test_bigdata` | `bigdata_52k.jsonl` 52k `15k Fortinet 15k Cisco 10k Palo 5k NGINX 5k CloudTrail +1k UNSW +1k Loghub` | `52k` `1000` E2E sample | `0.51s` `Drain3 52k 0.57s 7 templates` `7265 EPS 627M/day` | `≤10` templates |
 
 **Plane 3 Metrics:** `prism-brain 15 passed 3 skipped 12.44s` `Drain3 10k 0.02s 52k 0.57s 7 templates` `bench 1M router 3.53s <6` `heuristic 17µs 58k EPS` `Laya 120ms CPU 8 EPS` `llama.cpp Q4 0.7s` `E2E 1000 heuristic 51k EPS` `52k 7265 EPS 627M/day` `CPU-only device:cpu` `PR #13`
-**Status:** Fully Validated `pytest 15/18 + cargo 13/13` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes
+**Status:** Fully Validated `pytest 17/20 + cargo 17/17` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes
 ## Plane 5: Presentation & Observability
 * **Status:** Complete
-* **Timestamp (UTC):** `2026-09-24T13:25:17Z` (real bare-metal Arch 7.1.8 machine timestamp)
-* **Metrics:** Live TUI 10Hz render (`test_tui_render_4_pane` passed in 0.00s), ES Bulk API push verified (`test_sink_http_mock` passed in 0.12s). Total Cargo tests: `15/15` Rust tests passed.
+* **Timestamp (UTC):** `2026-09-24T15:02:40Z` (real bare-metal Arch 7.1.8 machine timestamp)
+* **Metrics:** Live TUI 10Hz render (`test_tui_render_4_pane` passed in 0.00s), ES Bulk API push verified (`test_sink_http_mock` passed in 0.12s). Total Cargo tests: `17/17` Rust tests passed.
 * **Citations:** OCSF 4001 Network Activity validated via ES _bulk; Kibana threat map integration split-screen.
 * **Extrapolation:** E2E Pipeline processes 52k logs at ~9223.20 EPS = Extrapolated to ~800M/day (9223.20 EPS * 86400s = 796,884,480 logs/day). Compared to legacy Logstash (30 nodes, 42ms latency), PRISM achieves p99 <25µs (as cited in PRISM whitepaper) natively in Rust zero-copy on bare-metal.
