@@ -79,3 +79,4 @@
 * **Status:** Fully Validated (pytest 5/5 passed, cargo 13/13)
 * **AI/ML Modules:** Drain3, Laya System1 (CPU 120ms), llama-server (Q4 CPU 0.7s)
 * **CPU-Only Metrics:** Drain3 52k variance 0.5s, Triage Heuristic 17µs, Laya CPU 120ms (0.766 acc), llama.cpp 0.7s, E2E Pipeline (52k logs) 7,265 EPS
+* **Decoupled:** Drain 10k 0.02s, Laya CPU 120ms, Coder 0s heuristic
