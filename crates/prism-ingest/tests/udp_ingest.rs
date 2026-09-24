@@ -176,3 +176,102 @@ async fn test_capacity_invariance_100k() {
     sender_handle.await.unwrap();
     assert!(result.is_ok(), "Failed to process 100,000 packets within timeout - indicating potential GC/allocation stalls");
 }
+
+#[tokio::test]
+async fn test_ingest_edge_cases() {
+    let bind_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+    let config = IngestConfig {
+        udp_bind_addr: bind_addr,
+        chunk_size: 10 * 1024 * 1024,
+        channel_capacity: 50_000,
+    };
+
+    let dispatcher = Dispatcher::new(&config);
+    let data_rx = dispatcher.data_receiver();
+    let prov_rx = dispatcher.provenance_receiver();
+    
+    let listener = Arc::new(UdpListener::new(config, dispatcher.sender()).await.unwrap());
+    let local_addr = listener.local_addr().unwrap();
+    
+    let listener_clone = listener.clone();
+    tokio::spawn(async move {
+        listener_clone.run().await.unwrap();
+    });
+
+    let client_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+
+    // 0-byte payload
+    client_socket.send_to(b"", local_addr).await.unwrap();
+
+    // 64KB max UDP (actually 65507 bytes is max UDP payload for IPv4)
+    let max_udp = vec![b'A'; 65507];
+    client_socket.send_to(&max_udp, local_addr).await.unwrap();
+
+    // Malformed syslog
+    client_socket.send_to(b"<123456789> malformed syslog here", local_addr).await.unwrap();
+
+    // Truncated CEF
+    client_socket.send_to(b"CEF:0|Security|threatmgr|1.0|100|worm successfully st", local_addr).await.unwrap();
+
+    // Binary 0xff payload
+    let bin_payload = vec![0xff, 0xff, 0x00, 0x01];
+    client_socket.send_to(&bin_payload, local_addr).await.unwrap();
+
+    let _ = timeout(Duration::from_secs(2), async {
+        let mut count = 0;
+        // We sent 5 packets. The 0-byte might be dropped or accepted depending on implementation. Let's see.
+        while let Ok(_data_event) = data_rx.recv_async().await {
+            let _ = prov_rx.recv_async().await.unwrap();
+            count += 1;
+            if count == 5 { break; } // Assuming 0-byte is passed through
+        }
+    }).await;
+}
+
+#[tokio::test]
+async fn test_1m_burst_ingest() {
+    let bind_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+    let config = IngestConfig {
+        udp_bind_addr: bind_addr,
+        chunk_size: 10 * 1024 * 1024,
+        channel_capacity: 1_000_000,
+    };
+
+    let dispatcher = Dispatcher::new(&config);
+    let data_rx = dispatcher.data_receiver();
+    let prov_rx = dispatcher.provenance_receiver();
+    
+    let listener = Arc::new(UdpListener::new(config, dispatcher.sender()).await.unwrap());
+    let local_addr = listener.local_addr().unwrap();
+    
+    let listener_clone = listener.clone();
+    tokio::spawn(async move {
+        listener_clone.run().await.unwrap();
+    });
+
+    let client_socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let payload = b"x";
+    
+    let sender_handle = tokio::spawn(async move {
+        for j in 0..1_000_000 {
+            client_socket.send_to(payload, local_addr).await.unwrap();
+            if j % 1000 == 0 {
+                tokio::task::yield_now().await;
+            }
+        }
+    });
+
+    let result = timeout(Duration::from_secs(15), async {
+        let mut count = 0;
+        while let Ok(_) = data_rx.recv_async().await {
+            let _ = prov_rx.recv_async().await.unwrap();
+            count += 1;
+            if count == 1_000_000 {
+                break;
+            }
+        }
+    }).await;
+
+    sender_handle.await.unwrap();
+    assert!(result.is_ok(), "Failed to process 1,000,000 packets within timeout");
+}

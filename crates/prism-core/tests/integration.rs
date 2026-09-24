@@ -13,10 +13,25 @@ use httptest::{Server, Expectation, matchers::*, responders::*};
 
 #[tokio::test]
 async fn test_data_plane_routing() {
-    let dlq_path = "/tmp/prism_dlq.log";
+    // Start docker-compose
+    let output = std::process::Command::new("docker")
+        .args(["compose", "up", "-d", "--wait", "--wait-timeout", "35"])
+        .current_dir("../../")
+        .output()
+        .expect("Failed to execute docker compose");
+    
+    if !output.status.success() {
+        println!("docker compose up failed: {:?}", String::from_utf8_lossy(&output.stderr));
+    }
+    
+    // give it an extra moment if needed, but --wait should block until healthy
+
+    let dlq_path = "/tmp/prism_dlq_integration_test.log";
     let _ = fs::remove_file(dlq_path);
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
     let vrl = VrlEngine::new().unwrap();
+    
+    let mut batch = Vec::new();
     
     // Test 50,000 heterogeneous logs
     for i in 0..50_000 {
@@ -38,7 +53,24 @@ async fn test_data_plane_routing() {
         assert_eq!(ocsf.metadata.version, "1.9.0");
         assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str());
         assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5");
+        
+        batch.push(ocsf);
+        if batch.len() >= 10000 {
+            let sink = HttpSink::new("http://localhost:9200/prism-ocsf/_bulk");
+            let resp = sink.push_bulk(&batch).await;
+            assert!(resp.is_ok(), "bulk failed {:?}", resp);
+            batch.clear();
+        }
     }
+
+    // Refresh the index to make documents visible to search immediately
+    let client = reqwest::Client::new();
+    let _ = client.post("http://localhost:9200/prism-ocsf/_refresh").send().await;
+
+    // Verify count
+    let count_resp = client.get("http://localhost:9200/prism-ocsf/_count").send().await.unwrap();
+    let count_json: serde_json::Value = count_resp.json().await.unwrap();
+    assert_eq!(count_json["count"].as_u64().unwrap(), 50000);
 
     // Unknown -> DLQ
     let alien = b"alien raw bytes";
@@ -53,6 +85,12 @@ async fn test_data_plane_routing() {
     
     let dlq_contents = fs::read_to_string(dlq_path).unwrap();
     assert!(dlq_contents.contains("alien raw bytes"));
+    
+    // Shut down docker compose
+    let _ = std::process::Command::new("docker")
+        .args(["compose", "down", "-v"])
+        .current_dir("../../")
+        .output();
 }
 
 #[tokio::test]

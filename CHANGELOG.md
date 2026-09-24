@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] 2026-09-24 — feat: Plane 5 Presentation TUI 4-pane + ES/Kibana 50k bulk + 360° tests + SIH PS 26156 a-k compliance
+
 ## [0.9.0] 2026-09-23 — feat: Phase 3 Control Plane init
 - Bootstrapped `prism-brain` with `watcher`, `cluster` (Drain3), `triage` (Open Jev), `coder` (Ollama), and `gatekeeper` (HitL) modules.
 - Added end-to-end `pytest` gate testing NGINX alien log parsing.
