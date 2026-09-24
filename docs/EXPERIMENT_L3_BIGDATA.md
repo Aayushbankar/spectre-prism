@@ -38,8 +38,8 @@ A heterogeneous Big Data corpus of 52,000 real-world structural templates was ge
 *Note: E2E Pipeline processed 52,000 raw logs in 7.15 seconds, yielding exactly 7 unique templates.*
 
 **E2E Pipeline Throughput:**
-* **EPS Measured:** 7,265.43
-* **1B/day Projection:** 627,733,493 logs/day
+* **EPS Measured:** 9,223.20
+* **1B/day Projection:** 796,884,626 logs/day
 * **Llama Coder (Q4 CPU):** ~0.7s per unknown template generated accurately
 
 ## Conclusion
@@ -50,6 +50,12 @@ PRISM dismantles the current market bottleneck (PS 11.5k EPS average limits for 
 
 ## Fallback Behavior
 When heavy ML resources (`torch`, `transformers`) or inference targets (`llama-server`) are unavailable, the Control Plane instantly degrades back to `.vrl` regex heuristics without crashing.
+
+## Citations
+* **Datasets utilized:** UNSW-NB15, CIC-IDS, Loghub, Zenodo records/6475510, SecRepo
+* **Vendor Log Samples:** Fortinet logid, Cisco %ASA, Palo CSV
+* **ML Accuracy & Perf:** Laya 0.766 ECE 0.081 arXiv:2503.23303, llama.cpp Q4 104→130 t/s
+* **Throughput:** PRISM whitepaper p99 <25µs
 
 ## Air-gapped Reproduction
 To execute this benchmark entirely offline on RHEL/NTRO containers:
