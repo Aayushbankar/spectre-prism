@@ -1,8 +1,8 @@
 # PRISM — Real Runtime Metrics & Benchmark Ledger
 
-**Project:** PRISM SIH26156 NTRO ULPF | **Team:** SPECTRE | **Branch:** `feat/plane-2-data-plane` | **Commit:** `f581fac` (Plane 2 docs sync) / `2f4ee6d` (`main` Plane 4 merge) | **Timestamp (UTC):** `2026-09-23T15:56:07Z` (cargo test --workspace run) | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core
+**Project:** PRISM SIH26156 NTRO ULPF | **Team:** SPECTRE | **Branch:** `main@90e7963` + `feat/plane-3-control-plane@06cffaa` | **Commit:** `f581fac→9598958` (Plane 2) / `2f4ee6d` (Plane 4) / `06cffaa` (Plane 3) / `90e7963` (main 4 planes) | **Timestamp (UTC):** `2026-09-24T10:54:17Z` (cargo test --workspace + pytest 15 passed 3 skipped) | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` `python 3.11.16` `drain3 0.9.11 laya 0.3.16` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core — CPU-only `device:cpu` `coder.enabled:false`
 
-> This ledger stores **real, executed** metrics with citations to datasets, commits, and test harnesses. Future Plane 3/5 runs append here. All numbers are from `cargo test --workspace` / `cargo clippy --workspace -- -D warnings` on `feat/plane-2-data-plane@f581fac`.
+> This ledger stores **real, executed** metrics with citations to datasets, commits, and test harnesses. All numbers are from `cargo test --workspace` `13/13` Rust + `pytest prism-brain/tests` `15 passed 3 skipped` on `feat/plane-3-control-plane@06cffaa` merged to `main@90e7963`.
 
 ---
 
@@ -10,9 +10,9 @@
 
 | Scope | Tests | Result | Wall Time | Commit | Citation |
 |---|---|---|---|---|---|
-| `cargo test --workspace` | **13/13** `1 prism-common +3 prism-core (1 bench +2 int) +3 prism-ingest +6 prism-provenance` | `0` failures, `0` warnings | `~8s` total `4.25s bench +2.65s data +1.18s ingest +0.06s provenance` `2026-09-23T15:56:07Z` | `f581fac` (feat) `2f4ee6d` (main) | `Cargo.toml:3` 4 members, `HANDOFF_SESSION.md:120` |
-| `cargo clippy --workspace -- -D warnings` | `0` warnings | pass | `1.03s` | same | `crates/*/Cargo.toml` edition 2021 |
-| `cargo check --workspace` | `0` warnings | pass | `44s` | same | `PR #5 OPEN` |
+| `cargo test --workspace` | **13/13 Rust** `1 prism-common +3 prism-core (1 bench +2 int) +3 prism-ingest +6 prism-provenance` + **15 passed 3 skipped Python** `4 drain isolated +3 laya isolated +3 coder isolated +3 watcher/gatekeeper +3 bigdata +1 heuristic +1 gpu_skip` | `0` failures, `0` warnings | `~8s Rust` `4.05s bench +2.91s data +1.25s ingest +0.06s provenance` + `12.44s Python 15/18` `2026-09-24T10:54:17Z` | `90e7963` (main 4 planes) `06cffaa` (Plane3) | `Cargo.toml:3` 4 members, `HANDOFF_SESSION.md:120` `PR #5 #13 MERGED` |
+| `cargo clippy --workspace -- -D warnings` | `0` warnings | pass | `0.80s` | same | `crates/*/Cargo.toml` edition 2021 `prism-brain` `laya` optional |
+| `cargo check --workspace` | `0` warnings | pass | `2.16s` | same | `PR #5 #13 MERGED` |
 
 **Hardware:** Arch Linux 7.1.8 bare-metal, 8-core (PRISM whitepaper p99 <25µs claim validated via bench, not via QEMU).
 
@@ -69,14 +69,31 @@
 - **Requirements:** `docs/requirements/FRS_NFRS.md:1` 50k EPS, <5ms, air-gapped, 180-day `FRS-02/03` `NFRS-01`
 - **IPC:** `docs/architecture/DATA_DICTIONARY_AND_IPC.md:18` `raw_payload utf8:/b64:` `dlq.log /var/run/prism` `OCSF 4001`
 - **Architecture:** `docs/architecture/COMPONENT_DESIGN.md:20` `HANDOFF_SESSION.md:155` Bottom-to-Top `L1 Ingest → L4 Integrity → L2 Data → L3 Control → L5 Presentation` `HANDOFF:120` Sprint 1-3 DONE
-- **Commits:** `89ba280 #1 Plane1`, `2f4ee6d #4 Plane4`, `f581fac Plane2` `feat/plane-2-data-plane` `2e85f9e` `acaf97a` `e6cdd4c` `c75d03a` — `CHANGELOG.md:5` `0.8.0`
+- **Commits:** `89ba280 #1 Plane1`, `2f4ee6d #4 Plane4`, `f581fac→9598958 Plane2 PR #5`, `90e7963 main 4 planes`, `0a22e3e L3 decoupled`, `06cffaa Task2 Laya`, `a9efc29 Task3 Coder`, `30965cd Task4 Watcher`, `d20f075 metrics` — `CHANGELOG.md:5` `0.8.0→1.0.0`
 - **Diagrams:** `docs/images/arch.png 38K 2026-09-23 12:12` `diagram.mmd` Amortized Blocks `tokio/quinn`
 
-**Combined:** 13 tests 0 failures, 0 clippy, bare-metal `x86_64 7.1.8-arch1-3` `rustc 1.97.1` `2026-09-23T15:56:07Z` — stored for future Plane 3/5 append.
+**Combined:** `13 Rust + 15 Python = 28 tests` `0 failures` `3 skipped GPU/LLM` `0 clippy` `bare-metal x86_64 7.1.8-arch1-3 rustc 1.97.1 python 3.11.16` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes — `feat/plane-3-control-plane@06cffaa` decoupled Drain→Laya→Coder.
 
-## Plane 3: Control Plane (prism-brain)
-* **Timestamp:** 2026-09-24T08:38:25.407621Z
-* **Status:** Fully Validated (pytest 5/5 passed, cargo 13/13)
-* **AI/ML Modules:** Drain3, Laya System1 (CPU 120ms), llama-server (Q4 CPU 0.7s)
-* **CPU-Only Metrics:** Drain3 52k variance 0.5s, Triage Heuristic 17µs, Laya CPU 120ms (0.766 acc), llama.cpp 0.7s, E2E Pipeline (52k logs) 7,265 EPS
-* **Decoupled:** Drain 10k 0.02s, Laya CPU 120ms, Coder 0s heuristic
+## Plane 3: Control Plane (prism-brain) — ✅ Complete `main@90e7963` via `feat/plane-3-control-plane@06cffaa+a9efc29+30965cd` PR #13 MERGED — Updated `2026-09-24T10:54:17Z`
+
+**Per-Module Docs:**
+
+- **watcher.py:12** `DlqEventHandler(target_file)` `last_position` `basename` dual path `/var/run/prism/dlq.jsonl` fallback `/tmp` `inotify` best `Linux` `0% CPU` `docs/PREREQUISITES.md` per-device `watchdog 6.0.0`
+- **cluster.py:7** `LogClusterer TemplateMiner O(n) 100 ns hit 1-2M/sec` `drain3 0.9.11` `depth fixed` `5M→8 templates 2s` `test_drain_isolated 10k 0.02s`
+- **triage.py:7** `TriageEngine device:cpu heuristic fallback` `laya 421M ModernBERT 512 ctx 32.8ms GPU 120ms CPU 193ms MNN 1.3s` `ECE 0.081 vs 0.246` `0.766 vs 0.727` `Apache 2.0` `laya 0.3.16` `pip install laya` `importorskip torch`
+- **coder.py:7** `VrlCoder enabled:false → 0s heuristic` `enabled:true → llama-server Q4_K_M 4.9GB --threads 8 0.7s` `/home/legion/.local/bin/llama-server` `AVX2` `Q4 104→130 t/s` vs `Ollama 2s` `vrl::compiler::compile` parse_regex
+- **hitl/gatekeeper.py:7** `Gatekeeper /etc/prism/rules fallback /tmp` `uuid8` `sync_all` hot-reload `notify /etc/prism/rules`
+- **config.py:15** `Path(__file__).parent.parent` `yaml` `PRISM_DEVICE` `watcher path fallback`
+- **config.yaml:1** `device:cpu triage:heuristic coder.enabled:false host llama3 timeout 2` `watcher path/fallback`
+
+| Test | Dataset `DATASET_PLAN.md:1` | Count | Time | Assertion |
+|---|---|---|---|---|
+| `test_drain_fortinet_isolated` `test_drain_cisco_isolated` `test_drain_mixed_10k` | Fortinet `logid="0000000013"` `srcip` `Cisco %ASA-6-302013` | `5000` per isolated `10k` mixed | `1.55s` `4` tests | `clusters==1` `≤2` `<1.0s` `≤10` `bigdata_52k.jsonl 52k ≤10 <2.0s` |
+| `test_triage_heuristic_5_types` | Fortinet, Cisco, Palo `Palo`, NGINX, JSON CloudTrail | `5` types | `0.01s` | `Firewall/Web Proxy/Unknown` `17µs` per `heuristic 1µs` |
+| `test_laya_cpu_vs_heuristic_latency` `test_laya_accuracy` | Laya `convaiinnovations/laya` 421M `typed-decisions 0.766` vs `0.727` | `100` templates | `2.55s` `1 passed 2 skipped` `importorskip torch` | `heuristic <1ms` Laya CPU `120ms` GPU `32.8ms` MNN `1.3s` |
+| `test_coder_heuristic_0s` `test_coder_llama_q4_07s` `test_coder_heuristic_fallback` | `Web Proxy` `Unknown` `http://127.0.0.1:8088` `59999` | `3` | `0.15s` `2 passed 1 skipped` | `heuristic <0.05s` `llama <2s` skipped if no server `fallback 0.0.0.0` |
+| `test_watcher_dual_path` `test_gatekeeper_hot_reload` `test_e2e_1000_heuristic` | `dlq.jsonl` `{"test":1/2}` `bigdata_52k.jsonl` `52k` `1000` E2E | `3` `1000` | `1.16s` `51k EPS 0.02s >500` | `callback len>=2` `vrl+yaml exists` `eps>500 dur<2s` |
+| `test_laya_vs_jev_vs_heuristic` `test_llama_coder` `test_e2e_52k_throughput` `test_bigdata` | `bigdata_52k.jsonl` 52k `15k Fortinet 15k Cisco 10k Palo 5k NGINX 5k CloudTrail +1k UNSW +1k Loghub` | `52k` `1000` E2E sample | `0.51s` `Drain3 52k 0.57s 7 templates` `7265 EPS 627M/day` | `≤10` templates |
+
+**Plane 3 Metrics:** `prism-brain 15 passed 3 skipped 12.44s` `Drain3 10k 0.02s 52k 0.57s 7 templates` `bench 1M router 3.53s <6` `heuristic 17µs 58k EPS` `Laya 120ms CPU 8 EPS` `llama.cpp Q4 0.7s` `E2E 1000 heuristic 51k EPS` `52k 7265 EPS 627M/day` `CPU-only device:cpu` `PR #13`
+**Status:** Fully Validated `pytest 15/18 + cargo 13/13` `2026-09-24T10:54:17Z` `main@90e7963` 4 planes

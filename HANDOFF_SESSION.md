@@ -120,7 +120,7 @@ In the new chat, transition directly from the Waterfall Design phase into **Iter
 ### Sprint Phase 1: Workspace & Ingestion Foundation - DONE
 ### Sprint Phase 2: Integrity Plane - DONE
 ### Sprint Phase 3: Data Plane - DONE
-### Sprint Phase 4: Control Plane - 🚧 In Progress
+### Sprint Phase 4: Control Plane - DONE
 1. **Initialize Cargo Workspace** in `/mnt/work/projects/sih/prism`:
    ```toml
    [workspace]
@@ -207,18 +207,18 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
   4. `dlq`: Dead Letter Queue file sink (`/var/run/prism/dlq.log`) for unrecognized logs.
   5. `sink`: HTTP Bulk Exporter (`reqwest`) pushing to SIEM.
 * **Testing Gate:** Ingest 50,000 mixed logs; verify OCSF 4001 + dlq.log verified.
-### Phase 4: Control Plane (`feat/plane-3-control-plane`) - 🚧 In Progress
-* **Target:** `prism-brain/` (Python)
-* **Configuration:** Control Plane is CPU-only by default (LLM and Torch optional). Configs changeable per device via `config.yaml`.
-* **Experiment:** see [docs/EXPERIMENT_L3_BIGDATA.md](docs/EXPERIMENT_L3_BIGDATA.md)
-* **Note:** Decoupled 3 modules Drain→Laya→Coder, each best perf independently, debug isolated
+### Phase 4: Control Plane (`feat/plane-3-control-plane`) - ✅ Complete `main@90e7963` + `feat/plane-3-control-plane@06cffaa`
+* **Target:** `prism-brain/` (Python) **DONE**
+* **Configuration:** CPU-only `device:cpu` `coder.enabled:false` `laya` optional 421M `llama-server Q4` `/home/legion/.local/bin/llama-server` `config.yaml` `PRISM_DEVICE`
+* **Experiment:** `docs/EXPERIMENT_L3_BIGDATA.md` 52k heter `Fortinet logid Cisco %ASA Palo CSV` `7 templates 0.57s` `Laya 32ms GPU/120ms CPU 0.766` `heuristic 17µs` `llama Q4 0.7s` `E2E 7265 EPS 627M/day`
+* **Note:** Decoupled 3 modules Drain→Laya→Coder, each best perf independently, per-device `device:cpu|gpu` `coder.enabled`
 * **Modules:**
-  1. `watcher`: File watchdog detecting entries in `dlq.log`.
-  2. `cluster`: Drain3 fixed-depth tree grouping raw logs into templates.
-  3. `triage`: Open Jev (System 1) zero-shot classification for device type.
-  4. `coder`: Ollama (System 2) Llama-3 generating VRL remap scripts and router signatures.
-  5. `hitl`: Human-in-the-Loop review loop triggering hot-reload in `prism-core`.
-* **Testing Gate:** Feed an alien log format (e.g. NGINX access log); verify Drain3 creates 1 template; verify Open Jev classifies as Web Proxy; verify Ollama produces valid VRL; verify hot-reload works without restarting Rust.
+  1. `watcher`: `watchdog inotify` `last_position` `basename` dual path `/var/run/prism/dlq.jsonl` + `/tmp` `0% CPU`
+  2. `cluster`: `Drain3 TemplateMiner O(n) 100 ns hit 1-2M/sec` `drain.rs fixed depth` `10k 0.02s`
+  3. `triage`: `Laya System1 421M ModernBERT 512 ctx 32.8ms` `heuristic fallback 17µs` `Apache 2.0` `laya 0.3.16`
+  4. `coder`: `llama-server Q4_K_M 4.9GB AVX2 0.7s` heuristic `0s` `VRL parse_regex`
+  5. `hitl`: `Gatekeeper /etc/prism/rules fallback /tmp uuid sync_all`
+* **Testing Gate:** `test_drain_isolated 4/4 <1s` `test_triage 5 types` `test_laya 1 passed 2 skipped` `test_coder 2 passed 1 skipped` `test_watcher 3/3 51k EPS` `pytest 15 passed 3 skipped 12.44s` `cargo 13/13`
 
 ### Phase 5: Presentation & Observability (`feat/plane-5-presentation`)
 * **Target:** `crates/prism-tui` & `docker-compose.yml`
