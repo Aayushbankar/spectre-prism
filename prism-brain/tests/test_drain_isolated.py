@@ -35,6 +35,10 @@ def test_drain_50k_bigdata():
     if os.path.exists(data_path):
         with open(data_path, 'r') as f:
             for line in f:
-                c.process_log(line.strip())
+                try:
+                    payload = json.loads(line).get("raw_payload", line.strip())
+                except json.JSONDecodeError:
+                    payload = line.strip()
+                c.process_log(payload)
     assert len(c.miner.drain.clusters) <= 10
     assert time.time() - t0 < 2.0

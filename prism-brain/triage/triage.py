@@ -38,7 +38,7 @@ class TriageEngine:
         template_lower = template.lower()
         if "nginx" in template_lower or "http" in template_lower or "proxy" in template_lower:
             return "Web Proxy"
-        if "asa" in template_lower or "cisco" in template_lower or "palo alto" in template_lower or "forti" in template_lower:
+        if "asa" in template_lower or "cisco" in template_lower or "palo" in template_lower or "forti" in template_lower:
             return "Firewall"
         if "sql" in template_lower or "db" in template_lower:
             return "Database"
