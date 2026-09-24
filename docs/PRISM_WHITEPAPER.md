@@ -32,14 +32,14 @@ The industry fails because it faces the **Latency-Cost Trilemma**: Regex is fast
 * **Dynamic Routing:** `HeuristicRouter` utilizing `memchr` that bypasses heavy regex. Unrecognized packets are routed to the DLQ (Dead Letter Queue).
 
 ### Plane 3: The Control Plane (The Brain)
-* **Function:** Autonomous onboarding of unknown logs using a **Dual-AI (System 1 + System 2)** architecture.
+* **Function:** Autonomous onboarding of unknown logs using a **Dual-AI (System 1 + System 2)** architecture. (Note: Decoupled 3 modules Drain→Laya→Coder, each best perf independently, debug isolated)
 
 ![AI Flow](images/ai_flow.png)
 
 * **Drain3 Compressor:** Reduces 50,000 unknown logs into 1 static template to prevent token-exhaustion.
-* **Open Jev (System 1):** A non-generative, hallucinaton-free AI classifies the template (e.g., "98% Palo Alto Threat Log").
-* **Ollama (System 2):** A generative SLM (Llama-3) writes the VRL parser code using the template and Jev's classification.
-* **HitL Gatekeeper:** The drafted code is verified by Open Jev for type-safety and presented to a human admin for 1-click Hot-Reload approval.
+* **Laya (System 1):** A non-generative, hallucinaton-free AI classifies the template (e.g., "98% Palo Alto Threat Log").
+* **llama-server (System 2):** A generative SLM (Llama-3) writes the VRL parser code using the template and Laya's classification.
+* **HitL Gatekeeper:** The drafted code is verified by Laya for type-safety and presented to a human admin for 1-click Hot-Reload approval.
 
 ### Plane 4: The Integrity Plane (The Bone)
 * **Function:** Cryptographic forensic traceability to prove chain-of-custody for intelligence audits.

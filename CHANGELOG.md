@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] 2026-09-23 — feat: Phase 3 Control Plane init
+- Bootstrapped `prism-brain` with `watcher`, `cluster` (Drain3), `triage` (Open Jev), `coder` (Ollama), and `gatekeeper` (HitL) modules.
+- Added end-to-end `pytest` gate testing NGINX alien log parsing.
+
 ## [0.8.0] 2026-09-23 — feat: Phase 2 Data Plane (f428b5d+2e85f9e) — HeuristicRouter memchr 1M <5s, VRL compile per-vendor srcip/outside/,ip, OcsfMapper category_uid 4, DLQ /var/run/prism/dlq.log create_dir_all, HttpSink httptest mock, 50k heter Fortinet/Cisco/Palo test
 
 ## [0.7.0] 2026-09-23 — docs: sync Phase1 ingestion plane (ac202e1)

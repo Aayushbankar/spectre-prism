@@ -38,14 +38,14 @@ This document details the internal module structure required to fulfill the 4-pl
 
 ### C. Control Plane (`prism-brain`)
 **Language:** Python (for AI/ML libraries)
-*   **`cluster.py`:**
-    *   Implements **Drain3**. Compresses high-volume unknown logs into static templates to prevent token exhaustion.
-*   **`triage.py`:**
-    *   Uses **Open Jev (System 1 AI)**. Instantly classifies the template (e.g., Firewall, Web, DB) with a mathematical confidence score. No hallucinations.
-*   **`coder.py`:**
-    *   Uses **Ollama (System 2 AI)**. A generative local SLM (Llama-3-8B-Instruct) drafts the VRL script based on the template and Jev's classification.
-*   **`gatekeeper.py`:**
-    *   Verifies the draft using Open Jev, then prompts the human Admin on the TUI for 1-click approval.
+*   **`cluster` / Drain3:**
+    *   Fixed-Depth Tree CPU 1M/sec O(n) d+cm
+*   **`triage` / Laya:**
+    *   System1 421M 32ms GPU /120ms CPU vs heuristic 1µs
+*   **`coder` / llama-server:**
+    *   Q4_K_M 0.7s CPU AVX2 vs heuristic 0s
+
+Note: watcher/gatekeeper later, decoupled for debug + per-device best perf
 
 ### D. Integrity Plane (`prism-provenance`)
 **Language:** Rust

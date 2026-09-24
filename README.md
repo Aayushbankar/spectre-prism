@@ -20,11 +20,19 @@ Before writing any code, please read the official architecture blueprints. This 
 5. **[Teamwork AI Architectural Evaluation](teamwork_eval/ARCHITECTURAL_COMPARISON.md)**
 
 ## ⚙️ Prerequisites
+See **[PREREQUISITES.md](docs/PREREQUISITES.md)** for the full per-device configuration matrix (Air-gapped, CPU-only, GPU).
 To develop and run PRISM locally, ensure you have the following installed:
-- **Rust** (`cargo`, `rustc`)
+- **Rust** (`cargo`, `rustc 1.97.1`)
 - **Python 3.12+** (with `pip`)
 - **Docker & Docker Compose** (for Elasticsearch/Kibana sink testing)
-- **Ollama** (for local System 2 AI execution)
+- **Ollama** (Optional, configure via `prism-brain/config.yaml`)
+
+Example `config.yaml` (CPU-Only Laptop):
+```yaml
+device: cpu
+coder:
+  enabled: false
+```
 
 ## 🚀 Getting Started
 ```bash

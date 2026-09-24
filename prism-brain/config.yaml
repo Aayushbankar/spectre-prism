@@ -1,0 +1,12 @@
+device: cpu # cpu|gpu|auto
+triage:
+  engine: heuristic # heuristic|open-jev (auto-fallback to heuristic if torch not available)
+  model: open-jev-deberta-v3-large
+coder:
+  enabled: false # true -> Ollama, false -> heuristic VRL (CPU-only default)
+  host: http://localhost:11434
+  model: llama3
+  timeout: 2
+watcher:
+  path: /var/run/prism/dlq.jsonl
+  fallback: /tmp/prism/dlq.jsonl
