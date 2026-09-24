@@ -42,7 +42,7 @@ This report documents the results of the 360° Testing phase for PRISM (Programm
 
 ## Tooling Checks
 - **Cargo Clippy:** `cargo clippy --workspace -- -D warnings` -> 0 warnings.
-- **Cargo Tests:** `cargo test --workspace` -> 18 tests passed.
+- **Cargo Tests:** `cargo test --workspace` -> 17 tests passed.
 - **Pytest:** `python -m pytest prism-brain -v` -> 17 passed, 3 skipped, 0 failures.
 
 ## Notes
