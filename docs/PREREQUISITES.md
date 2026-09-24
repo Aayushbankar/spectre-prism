@@ -12,7 +12,7 @@ This document outlines the deployment configurations for various target platform
 
 ### Core Toolchain
 * **Rust:** `rustc 1.97.1` (Cargo Workspace)
-* **Python:** `3.12` (Control Plane)
+* **Python:** `3.11` (Control Plane)
 * **LLM (Optional):** `Ollama` for local autonomous rule generation
 * **Packages:** `watchdog`, `drain3` (Base requirements)
 

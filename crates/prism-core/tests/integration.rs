@@ -13,12 +13,20 @@ use httptest::{Server, Expectation, matchers::*, responders::*};
 
 #[tokio::test]
 async fn test_data_plane_routing() {
-    if reqwest::get("http://localhost:9200").await.is_err() {
-        println!("ES unreachable, skipping test");
-        return;
+    // Start docker-compose
+    let output = std::process::Command::new("docker")
+        .args(["compose", "up", "-d", "--wait", "--wait-timeout", "35"])
+        .current_dir("../../")
+        .output()
+        .expect("Failed to execute docker compose");
+    
+    if !output.status.success() {
+        println!("docker compose up failed: {:?}", String::from_utf8_lossy(&output.stderr));
     }
+    
+    // give it an extra moment if needed, but --wait should block until healthy
 
-    let dlq_path = "/tmp/prism_dlq.log";
+    let dlq_path = "/tmp/prism_dlq_integration_test.log";
     let _ = fs::remove_file(dlq_path);
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
     let vrl = VrlEngine::new().unwrap();
@@ -55,6 +63,15 @@ async fn test_data_plane_routing() {
         }
     }
 
+    // Refresh the index to make documents visible to search immediately
+    let client = reqwest::Client::new();
+    let _ = client.post("http://localhost:9200/prism-ocsf/_refresh").send().await;
+
+    // Verify count
+    let count_resp = client.get("http://localhost:9200/prism-ocsf/_count").send().await.unwrap();
+    let count_json: serde_json::Value = count_resp.json().await.unwrap();
+    assert_eq!(count_json["count"].as_u64().unwrap(), 50000);
+
     // Unknown -> DLQ
     let alien = b"alien raw bytes";
     let vendor = HeuristicRouter::route(alien);
@@ -68,6 +85,12 @@ async fn test_data_plane_routing() {
     
     let dlq_contents = fs::read_to_string(dlq_path).unwrap();
     assert!(dlq_contents.contains("alien raw bytes"));
+    
+    // Shut down docker compose
+    let _ = std::process::Command::new("docker")
+        .args(["compose", "down", "-v"])
+        .current_dir("../../")
+        .output();
 }
 
 #[tokio::test]
