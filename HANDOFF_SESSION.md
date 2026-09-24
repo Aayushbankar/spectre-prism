@@ -211,6 +211,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
 * **Target:** `prism-brain/` (Python)
 * **Configuration:** Control Plane is CPU-only by default (LLM and Torch optional). Configs changeable per device via `config.yaml`.
 * **Experiment:** see [docs/EXPERIMENT_L3_BIGDATA.md](docs/EXPERIMENT_L3_BIGDATA.md)
+* **Note:** Decoupled 3 modules Drain→Laya→Coder, each best perf independently, debug isolated
 * **Modules:**
   1. `watcher`: File watchdog detecting entries in `dlq.log`.
   2. `cluster`: Drain3 fixed-depth tree grouping raw logs into templates.
