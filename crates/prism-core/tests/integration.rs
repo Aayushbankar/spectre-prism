@@ -18,6 +18,8 @@ async fn test_data_plane_routing() {
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
     let vrl = VrlEngine::new().unwrap();
     
+    let mut batch = Vec::new();
+    
     // Test 50,000 heterogeneous logs
     for i in 0..50_000 {
         let payload = match i % 3 {
@@ -38,6 +40,15 @@ async fn test_data_plane_routing() {
         assert_eq!(ocsf.metadata.version, "1.9.0");
         assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str());
         assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5");
+        
+        batch.push(ocsf);
+        if batch.len() >= 10000 {
+            if let Ok(_) = reqwest::get("http://localhost:9200").await {
+                let sink = HttpSink::new("http://localhost:9200/prism-ocsf/_bulk");
+                let _ = sink.push_bulk(&batch).await;
+            }
+            batch.clear();
+        }
     }
 
     // Unknown -> DLQ

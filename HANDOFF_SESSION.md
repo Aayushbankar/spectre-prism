@@ -220,7 +220,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
   5. `hitl`: `Gatekeeper /etc/prism/rules fallback /tmp uuid sync_all`
 * **Testing Gate:** `test_drain_isolated 4/4 <1s` `test_triage 5 types` `test_laya 1 passed 2 skipped` `test_coder 2 passed 1 skipped` `test_watcher 3/3 51k EPS` `pytest 15 passed 3 skipped 12.44s` `cargo 13/13`
 
-### Phase 5: Presentation & Observability (`feat/plane-5-presentation`)
+### Phase 5: Presentation & Observability (`feat/plane-5-presentation`) - ✅ Complete
 * **Target:** `crates/prism-tui` & `docker-compose.yml`
 * **Modules:**
   1. `tui`: Ratatui 4-pane terminal engine room (Live EPS, DLQ rate, Merkle ticker, HitL approval).

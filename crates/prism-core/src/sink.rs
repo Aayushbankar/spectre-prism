@@ -16,8 +16,16 @@ impl HttpSink {
     }
 
     pub async fn push_bulk(&self, batch: &[OcsfNetworkActivity]) -> Result<()> {
+        let mut ndjson = String::new();
+        for item in batch {
+            ndjson.push_str("{\"index\":{}}\n");
+            ndjson.push_str(&serde_json::to_string(item).unwrap());
+            ndjson.push('\n');
+        }
+
         let resp = self.client.post(&self.endpoint)
-            .json(batch)
+            .header("Content-Type", "application/x-ndjson")
+            .body(ndjson)
             .send()
             .await?;
         
