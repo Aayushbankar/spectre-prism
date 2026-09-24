@@ -2,25 +2,17 @@ import sys
 import os
 import shutil
 import pytest
+from pathlib import Path
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# Setup paths so modules can be imported
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from cluster.cluster import LogClusterer
 from triage.triage import TriageEngine
 from coder.coder import VrlCoder
 from hitl.gatekeeper import Gatekeeper
 
-@pytest.mark.parametrize("device_mode, coder_enabled", [
-    ("cpu", False),
-    ("gpu", True)
-])
-def test_control_plane_end_to_end(device_mode, coder_enabled):
-    config = {
-        "device": device_mode,
-        "triage": {"engine": "open-jev" if device_mode == "gpu" else "heuristic"},
-        "coder": {"enabled": coder_enabled, "host": "http://localhost:11434", "timeout": 0.5}
-    }
-    
+def run_pipeline(config):
     # 1. Feed alien NGINX log
     nginx_log = '192.168.1.100 - - [10/Oct/2026:13:55:36 -0700] "GET /index.html HTTP/1.1" 200 2326'
     
@@ -48,3 +40,20 @@ def test_control_plane_end_to_end(device_mode, coder_enabled):
     
     # Cleanup
     shutil.rmtree("/tmp/prism_tests/rules")
+
+def test_heuristic_cpu():
+    config = {
+        "device": "cpu",
+        "triage": {"engine": "heuristic"},
+        "coder": {"enabled": False, "host": "http://localhost:11434", "timeout": 0.5}
+    }
+    run_pipeline(config)
+
+def test_gpu_skip():
+    pytest.importorskip("torch")
+    config = {
+        "device": "gpu",
+        "triage": {"engine": "open-jev"},
+        "coder": {"enabled": True, "host": "http://localhost:11434", "timeout": 0.5}
+    }
+    run_pipeline(config)
