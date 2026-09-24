@@ -29,8 +29,22 @@ impl HttpSink {
             .send()
             .await?;
         
-        if !resp.status().is_success() {
-            anyhow::bail!("Sink rejected bulk push: {}", resp.status());
+        let status = resp.status();
+        let body = resp.text().await?;
+
+        if !status.is_success() {
+            anyhow::bail!("Sink rejected bulk push: {} - {}", status, body);
+        }
+
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+            if json.get("errors").and_then(|v| v.as_bool()).unwrap_or(false) {
+                anyhow::bail!("Bulk push contained errors: {}", body);
+            }
+        } else {
+            // fallback if it's not valid json but contains errors:true
+            if body.contains("\"errors\":true") || body.contains("\"errors\": true") {
+                anyhow::bail!("Bulk push contained errors: {}", body);
+            }
         }
         
         Ok(())
