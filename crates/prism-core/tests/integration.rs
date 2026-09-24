@@ -13,6 +13,11 @@ use httptest::{Server, Expectation, matchers::*, responders::*};
 
 #[tokio::test]
 async fn test_data_plane_routing() {
+    if reqwest::get("http://localhost:9200").await.is_err() {
+        println!("ES unreachable, skipping test");
+        return;
+    }
+
     let dlq_path = "/tmp/prism_dlq.log";
     let _ = fs::remove_file(dlq_path);
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
@@ -43,10 +48,9 @@ async fn test_data_plane_routing() {
         
         batch.push(ocsf);
         if batch.len() >= 10000 {
-            if let Ok(_) = reqwest::get("http://localhost:9200").await {
-                let sink = HttpSink::new("http://localhost:9200/prism-ocsf/_bulk");
-                let _ = sink.push_bulk(&batch).await;
-            }
+            let sink = HttpSink::new("http://localhost:9200/prism-ocsf/_bulk");
+            let resp = sink.push_bulk(&batch).await;
+            assert!(resp.is_ok(), "bulk failed {:?}", resp);
             batch.clear();
         }
     }

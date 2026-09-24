@@ -63,7 +63,9 @@ pub fn render_ui(f: &mut Frame, state: &TuiState) {
     f.render_widget(dlq_widget, top_chunks[1]);
 
     // Pane 3: Merkle Ticker
-    let ledger_tail = fs::read_to_string("output_dir/ledger.log")
+    let ledger_tail = fs::read_to_string("/tmp/test_vault_success/ledger.log")
+        .or_else(|_| fs::read_to_string("crates/prism-provenance/test_vault_success/ledger.log"))
+        .or_else(|_| fs::read_to_string("output_dir/ledger.log"))
         .map(|s| s.lines().last().unwrap_or("Empty").to_string())
         .unwrap_or_else(|_| "No Ledger".to_string());
     let merkle_widget = Paragraph::new(format!("Latest Root: {}", ledger_tail))
