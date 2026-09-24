@@ -26,17 +26,22 @@ class VrlCoder:
         if not self.enabled:
             logger.info("Coder: heuristic VRL (CPU-only)")
             return self._heuristic_fallback(device_type)
-
         prompt = f"Write a VRL script to parse this {device_type} log template: {template}. Extract 'ip' and map it to OCSF. Just return the VRL code."
         try:
+            # Detect if using llama-server or ollama
+            endpoint = "/completion" if "8088" in self.host else "/api/generate"
+            payload = {"prompt": prompt, "n_predict": 128} if endpoint == "/completion" else {"model": self.model, "prompt": prompt, "stream": False}
+            
             resp = requests.post(
-                f"{self.host}/api/generate",
-                json={"model": self.model, "prompt": prompt, "stream": False},
+                f"{self.host}{endpoint}",
+                json=payload,
                 timeout=self.timeout
             )
             if resp.status_code == 200:
-                logger.info("Coder: Ollama generated VRL")
-                return resp.json().get("response", "")
+                logger.info("Coder: LLM generated VRL")
+                data = resp.json()
+                return data.get("content", data.get("response", ""))
+
         except requests.exceptions.RequestException:
             logger.warning("Coder: Ollama unreachable, fallback to heuristic (CPU-only)")
             pass

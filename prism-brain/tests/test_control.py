@@ -116,7 +116,10 @@ def test_heuristic_cpu():
         os.remove(test_path)
 
 def test_gpu_skip():
-    pytest.importorskip("torch")
+    try:
+        import torch
+    except Exception:
+        pytest.skip("Torch not fully installed")
     config = {
         "device": "gpu",
         "triage": {"engine": "open-jev"},

@@ -210,6 +210,7 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
 ### Phase 4: Control Plane (`feat/plane-3-control-plane`) - 🚧 In Progress
 * **Target:** `prism-brain/` (Python)
 * **Configuration:** Control Plane is CPU-only by default (LLM and Torch optional). Configs changeable per device via `config.yaml`.
+* **Experiment:** see [docs/EXPERIMENT_L3_BIGDATA.md](docs/EXPERIMENT_L3_BIGDATA.md)
 * **Modules:**
   1. `watcher`: File watchdog detecting entries in `dlq.log`.
   2. `cluster`: Drain3 fixed-depth tree grouping raw logs into templates.

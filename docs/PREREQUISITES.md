@@ -22,3 +22,16 @@ Ensure your dependencies are successfully linked by running:
 pip show drain3
 ```
 This should output the package metadata if successfully installed.
+
+### Edge AI Installation
+To run the L3 Control Plane offline with ML extraction, compile and run `llama-server` and `laya`:
+```bash
+# llama-server
+cmake -DGGML_NATIVE=ON .
+make llama-server
+/home/legion/.local/bin/llama-server --model /tmp/models/llama3.gguf
+
+# laya
+pip install laya==0.3.16
+huggingface-cli download convaiinnovations/laya
+```
