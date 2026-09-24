@@ -75,7 +75,7 @@
 **Combined:** 13 tests 0 failures, 0 clippy, bare-metal `x86_64 7.1.8-arch1-3` `rustc 1.97.1` `2026-09-23T15:56:07Z` — stored for future Plane 3/5 append.
 
 ## Plane 3: Control Plane (prism-brain)
-* **Timestamp:** 2026-09-24T05:21:58.877812Z
-* **Status:** Bootstrapped (pytest 1 passed 1 skipped)
+* **Timestamp:** 2026-09-24T11:00:27Z
+* **Status:** Bootstrapped (pytest 2 tests 1 Passed (heuristic_cpu 10k variance 0.02s) 1 Skipped (torch), cargo 13/13, bench 3.53s <6)
 * **AI/ML Modules:** Drain3, Transformers (zero-shot), Ollama Llama-3
-* **CPU-Only Metrics:** Drain3 (50k variance, 1 template) in 0.02s, Triage heuristic in 0.001s (vs Jev 0.5s on GPU), Coder heuristic in 0s (vs Ollama 2s).
+* **CPU-Only Metrics:** Drain3 10k variance 0.02s, Triage heuristic 0.001s
