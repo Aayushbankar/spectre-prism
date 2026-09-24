@@ -35,3 +35,16 @@ make llama-server
 pip install laya==0.3.16
 huggingface-cli download convaiinnovations/laya
 ```
+
+### AI Model Requirements
+To reproduce the Big Data USP with ML enabled in air-gapped environments:
+```bash
+# System1 Engine
+pip install laya
+huggingface-cli download convaiinnovations/laya
+
+# System2 Coder Engine (Llama.cpp)
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp && cmake -DGGML_NATIVE=ON . && make llama-server
+llama-server --model /tmp/models/llama3.gguf --port 8088
+```
