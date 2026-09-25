@@ -1,5 +1,5 @@
 # SIH PS 26156 Compliance Audit
-Timestamp: 2026-09-24T13:25:17Z
+Timestamp: 2026-09-24
 
 ## Requirements Checklist
 - **a) preserve raw:** Verified. `vault.rs` writes exact raw payloads into Apache Parquet format (Tamper-Proof Cold Vault & Merkle Root).
