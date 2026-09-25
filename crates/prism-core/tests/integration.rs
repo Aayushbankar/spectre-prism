@@ -13,6 +13,11 @@ use httptest::{Server, Expectation, matchers::*, responders::*};
 
 #[tokio::test]
 async fn test_data_plane_routing() {
+    let _ = std::process::Command::new("docker")
+        .args(["compose", "down", "-v"])
+        .current_dir("../../")
+        .output();
+
     // Start docker-compose
     let output = std::process::Command::new("docker")
         .args(["compose", "up", "-d", "--wait", "--wait-timeout", "35"])
