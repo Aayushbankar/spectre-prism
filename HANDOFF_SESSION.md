@@ -1,6 +1,6 @@
 # Project PRISM — Session Handoff & Implementation Blueprint
 
-**Project Name:** PRISM (Programmable Routing & Intelligent Semantic Mapper)  
+**Project:** PRISM (Programmable Routing & Intelligent Semantic Mapper)  
 **Problem Statement:** SIH26156 — Universal Log Pre-processing Framework (ULPF)  
 **Organization:** National Technical Research Organisation (NTRO)  
 **Team:** SPECTRE  
