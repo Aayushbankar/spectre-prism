@@ -15,14 +15,14 @@ pub struct VrlEngine {
 }
 
 impl VrlEngine {
-    pub fn new() -> Result<Self> {
+    pub fn new(rules_dir: Option<&Path>) -> Result<Self> {
         let programs = Arc::new(RwLock::new(HashMap::new()));
         
-        let rules_dir = "/tmp/prism/rules";
-        std::fs::create_dir_all(rules_dir).unwrap_or_else(|e| eprintln!("Failed to create rules dir: {}", e));
+        let dir = rules_dir.unwrap_or_else(|| Path::new("/tmp/prism/rules"));
+        std::fs::create_dir_all(dir).unwrap_or_else(|e| eprintln!("Failed to create rules dir: {}", e));
 
         // Load existing files
-        if let Ok(entries) = std::fs::read_dir(rules_dir) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
             for entry in entries.flatten() {
                 if let Some(ext) = entry.path().extension() {
                     if ext == "vrl" {
@@ -41,6 +41,7 @@ impl VrlEngine {
 
         // Spawn background task
         let progs_clone = Arc::clone(&programs);
+        let watch_dir = dir.to_path_buf();
         tokio::spawn(async move {
             let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
             let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
@@ -49,7 +50,7 @@ impl VrlEngine {
                 }
             }).expect("Failed to create watcher");
             
-            let _ = watcher.watch(Path::new(rules_dir), RecursiveMode::NonRecursive);
+            let _ = watcher.watch(&watch_dir, RecursiveMode::NonRecursive);
 
             while let Some(event) = rx.recv().await {
                 let notify::Event { kind, paths, .. } = event;

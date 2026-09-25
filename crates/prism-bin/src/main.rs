@@ -180,7 +180,7 @@ async fn main() -> anyhow::Result<()> {
 
         tokio::spawn(async move {
             let _router = HeuristicRouter::new();
-            let vrl_engine = VrlEngine::new().expect("Failed to initialize VRL Engine");
+            let vrl_engine = VrlEngine::new(None).expect("Failed to initialize VRL Engine");
             let dlq_path = format!("{}/dlq_{}.log", vault_dir_data, uuid::Uuid::new_v4());
             let mut dlq = DeadLetterQueue::new(Some(&dlq_path)).unwrap();
             

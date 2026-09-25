@@ -11,6 +11,50 @@ use chrono::Utc;
 use std::fs;
 use httptest::{Server, Expectation, matchers::*, responders::*};
 
+fn setup_test_rules(dir: &std::path::Path) {
+    let _ = fs::create_dir_all(dir);
+    let fortinet = r#"
+        m1 = parse_regex(string!(.message), r'(?s).*?srcip=(?P<srcip>\d+\.\d+\.\d+\.\d+).*') ?? {}
+        if exists(m1.srcip) { .srcip = m1.srcip }
+        m2 = parse_regex(string!(.message), r'(?s).*?dstip=(?P<dstip>\d+\.\d+\.\d+\.\d+).*') ?? {}
+        if exists(m2.dstip) { .dstip = m2.dstip }
+        m3 = parse_regex(string!(.message), r'(?s).*?srcport=(?P<srcport>\d+).*') ?? {}
+        if exists(m3.srcport) { .srcport = m3.srcport }
+        m4 = parse_regex(string!(.message), r'(?s).*?dstport=(?P<dstport>\d+).*') ?? {}
+        if exists(m4.dstport) { .dstport = m4.dstport }
+        m5 = parse_regex(string!(.message), r'(?s).*?action="(?P<action>[^"]+)".*') ?? {}
+        if exists(m5.action) { .action = m5.action }
+        m6 = parse_regex(string!(.message), r'(?s).*?level="(?P<level>[^"]+)".*') ?? {}
+        if exists(m6.level) { .level = m6.level }
+    "#;
+
+    let cisco = r#"
+        m1 = parse_regex(string!(.message), r'(?s).*?outside:(?P<srcip>\d+\.\d+\.\d+\.\d+).*') ?? {}
+        if exists(m1.srcip) { .srcip = m1.srcip }
+        m2 = parse_regex(string!(.message), r'(?s).*?outside:\d+\.\d+\.\d+\.\d+/(?P<srcport>\d+).*') ?? {}
+        if exists(m2.srcport) { .srcport = m2.srcport }
+        m3 = parse_regex(string!(.message), r'(?s).*?inside:(?P<dstip>\d+\.\d+\.\d+\.\d+).*') ?? {}
+        if exists(m3.dstip) { .dstip = m3.dstip }
+        m4 = parse_regex(string!(.message), r'(?s).*?inside:\d+\.\d+\.\d+\.\d+/(?P<dstport>\d+).*') ?? {}
+        if exists(m4.dstport) { .dstport = m4.dstport }
+        m5 = parse_regex(string!(.message), r'(?s).*?%ASA-\d-(?P<msgid>\d+).*') ?? {}
+        if exists(m5.msgid) { .msgid = m5.msgid }
+    "#;
+
+    let palo = r#"
+        parts = split(string!(.message), ",")
+        .srcip = parts[7]
+        .dstip = parts[8]
+        .srcport = parts[24]
+        .dstport = parts[25]
+        .action = parts[29]
+    "#;
+
+    fs::write(dir.join("fortinet.vrl"), fortinet).unwrap();
+    fs::write(dir.join("cisco.vrl"), cisco).unwrap();
+    fs::write(dir.join("palo.vrl"), palo).unwrap();
+}
+
 #[tokio::test]
 async fn test_data_plane_routing() {
     let _ = std::process::Command::new("docker")
@@ -34,7 +78,10 @@ async fn test_data_plane_routing() {
     let dlq_path = "/tmp/prism_dlq_integration_test.log";
     let _ = fs::remove_file(dlq_path);
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
-    let vrl = VrlEngine::new().unwrap();
+    
+    let rules_dir = std::path::Path::new("/tmp/prism_test_rules_integration");
+    setup_test_rules(rules_dir);
+    let vrl = VrlEngine::new(Some(rules_dir)).unwrap();
     
     let mut batch = Vec::new();
     
@@ -54,10 +101,10 @@ async fn test_data_plane_routing() {
         let parsed = vrl.process(&vendor, payload_str).unwrap();
         let ocsf = OcsfMapper::map(parsed, &hash.to_hex(), Utc::now().timestamp_millis());
         
-        assert_eq!(ocsf.class_uid, 4001);
-        assert_eq!(ocsf.metadata.version, "1.9.0");
-        assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str());
-        assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5");
+        assert_eq!(ocsf.class_uid, 4001, "Failed for i={}", i);
+        assert_eq!(ocsf.metadata.version, "1.9.0", "Failed for i={}", i);
+        assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str(), "Failed for i={}", i);
+        assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5", "Failed for i={}, payload={}, ocsf={:?}", i, payload_str, ocsf);
         
         match i % 3 {
             0 => {
