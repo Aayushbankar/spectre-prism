@@ -20,7 +20,7 @@ async fn test_data_plane_routing() {
 
     // Start docker-compose
     let output = std::process::Command::new("docker")
-        .args(["compose", "up", "-d", "--wait", "--wait-timeout", "35"])
+        .args(["compose", "up", "-d", "--wait", "--wait-timeout", "120"])
         .current_dir("../../")
         .output()
         .expect("Failed to execute docker compose");

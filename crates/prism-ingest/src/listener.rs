@@ -23,6 +23,8 @@ impl UdpListener {
         
         let desired_buf_size = 8 * 1024 * 1024;
         let _ = socket2_sock.set_recv_buffer_size(desired_buf_size);
+        #[cfg(unix)]
+        let _ = socket2_sock.set_reuse_port(true);
         
         socket2_sock.bind(&config.udp_bind_addr.into())?;
         socket2_sock.set_nonblocking(true)?;
