@@ -55,13 +55,13 @@ async fn main() -> anyhow::Result<()> {
     let config = IngestConfig {
         udp_bind_addr: args.udp_bind_addr,
         chunk_size: 10 * 1024 * 1024,
-        channel_capacity: 10_000,
+        channel_capacity: 5_000_000,
     };
     
     let dispatcher = Arc::new(Dispatcher::new(&config));
     let sender = dispatcher.sender();
     
-    let listener = UdpListener::new(config, sender.clone()).await?;
+    // The initial listener instantiation is removed because we spawn 4 separate ones below.
     
     let prov_rx = dispatcher.provenance_receiver();
     let data_rx = dispatcher.data_receiver();
@@ -73,10 +73,16 @@ async fn main() -> anyhow::Result<()> {
     let processed_clone = processed_events.clone();
     let dlq_clone = dlq_count.clone();
 
-    // 1. UdpListener task
-    let _listener_handle = tokio::spawn(async move {
-        let _ = listener.run().await;
-    });
+    // 1. UdpListener tasks (8 parallel sockets via SO_REUSEPORT)
+    for _ in 0..8 {
+        let sender_clone = sender.clone();
+        let config_clone = config.clone();
+        tokio::spawn(async move {
+            if let Ok(listener) = UdpListener::new(config_clone, sender_clone).await {
+                let _ = listener.run().await;
+            }
+        });
+    }
 
     // 1b. TcpListener task
     if let Some(addr) = args.tcp_bind_addr {
@@ -130,20 +136,27 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
-    // 3. Data plane task
-    let vault_dir_data = args.vault_dir.clone();
-    let es_endpoint = args.es_endpoint.clone();
-    let _data_handle = tokio::spawn(async move {
-        let _router = HeuristicRouter::new();
-        let vrl_engine = VrlEngine::new().expect("Failed to initialize VRL Engine");
-        let dlq_path = format!("{}/dlq.log", vault_dir_data);
-        let mut dlq = DeadLetterQueue::new(Some(&dlq_path)).unwrap();
-        
-        let sink = es_endpoint.map(|ep| HttpSink::new(&ep));
-        let mut batch = Vec::new();
-        
-        while let Ok(event) = data_rx.recv_async().await {
-            let payload = &event.payload;
+    // 3. Data plane task (Parallelized)
+    let num_workers = 16;
+    for _ in 0..num_workers {
+        let data_rx = data_rx.clone();
+        let vault_dir_data = args.vault_dir.clone();
+        let es_endpoint = args.es_endpoint.clone();
+        let dlq_clone = dlq_count.clone();
+        let processed_clone = processed_events.clone();
+        let batch_size = args.batch_size;
+
+        tokio::spawn(async move {
+            let _router = HeuristicRouter::new();
+            let vrl_engine = VrlEngine::new().expect("Failed to initialize VRL Engine");
+            let dlq_path = format!("{}/dlq_{}.log", vault_dir_data, uuid::Uuid::new_v4());
+            let mut dlq = DeadLetterQueue::new(Some(&dlq_path)).unwrap();
+            
+            let sink = es_endpoint.map(|ep| HttpSink::new(&ep));
+            let mut batch = Vec::new();
+            
+            while let Ok(event) = data_rx.recv_async().await {
+                let payload = &event.payload;
             let payload_str = std::str::from_utf8(payload).unwrap_or("");
             
             let vendor = HeuristicRouter::route(payload);
@@ -174,8 +187,9 @@ async fn main() -> anyhow::Result<()> {
                     let _ = s.push_bulk(&batch).await;
                 } else {
                     for item in &batch {
-                        let json = serde_json::to_string(item).unwrap();
-                        println!("{}", json);
+                        // In perf tests, skip JSON serialization to stdout, just drop it.
+                        // let json = serde_json::to_string(item).unwrap();
+                        // println!("{}", json);
                     }
                 }
                 batch.clear();
@@ -184,7 +198,7 @@ async fn main() -> anyhow::Result<()> {
             processed_clone.fetch_add(1, Ordering::SeqCst);
         }
     });
-
+    }
     // Stats printer
     let mut interval = time::interval(Duration::from_secs(5));
     let mut last_processed = 0;

@@ -3753,6 +3753,7 @@ dependencies = [
  "prism-provenance",
  "serde_json",
  "tokio",
+ "uuid",
 ]
 
 [[package]]
