@@ -3,7 +3,7 @@
 **Project:** PRISM (SIH26156)
 **Methodology:** Waterfall + Iterative Development
 
-> **⚠️ NOTE TO TEAM MEMBERS & AI AGENTS:** 
+> **⚠️ NOTE TO TEAM SPECTRE & AI AGENTS:** 
 > This document is structured as an **Agent-Optimized Prompt Matrix**. Because our team is utilizing AI coding assistants (Cursor, Copilot, Antigravity), tasks are broken down into precise micro-tasks. 
 > *Workflow:* Copy the **"Agent Instructions"** block for your assigned task and paste it directly into your AI assistant along with the target file path.
 
