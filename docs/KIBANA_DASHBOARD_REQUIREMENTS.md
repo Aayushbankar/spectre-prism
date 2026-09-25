@@ -1,66 +1,62 @@
-# Kibana Dashboard Design Requirements (PRISM "Executive View")
-
+# PRISM Kibana Dashboard Design Guide
 **Project:** PRISM (SIH26156)  
-**Target:** Kibana Dashboards (Elasticsearch 8.x)  
-**Role:** Executive SIEM View for Dual-Dashboard Hackathon Demo  
+**Target Audience:** UI/UX Designers & Frontend Developers  
 
-## 1. Overview & Objective
-For our final SIH demo, PRISM utilizes a dual-screen presentation. Screen 1 is the "Engine Room" (Ratatui TUI showing raw Rust performance). Screen 2 is the **"Executive View" (Kibana Dashboard)**. 
+## 1. Introduction: What are we building?
+We are building the **"Executive View"** dashboard for our PRISM project demo. 
 
-Your objective is to build this Kibana Dashboard. The dashboard must visually prove that PRISM successfully ingests heterogeneous, proprietary firewall logs (Cisco, Fortinet, Palo Alto) and normalizes them into a single, unified format that standard SIEM tools can instantly understand. This directly satisfies PRISM's Requirement (f) Unified Visibility and (g) SIEM Integration.
+PRISM is a powerful backend engine that reads messy, completely different security logs from various firewalls (like Cisco, Fortinet, and Palo Alto) and magically transforms them all into one single, clean, standardized format. 
 
-## 2. Data Source & Schema
-PRISM's Rust Data Plane automatically batches and pushes logs to Elasticsearch via the HTTP Bulk Exporter. 
-You will be querying an Elasticsearch index (e.g., `prism-logs-*`).
+Your job is to design a dashboard (using Kibana) that visualizes this clean data. During our demo, we will show a split-screen:
+* **Left Screen (The Engine Room):** A matrix-style terminal showing our Rust backend processing 50,000 logs per second.
+* **Right Screen (The Executive View):** The dashboard **you** design, showing the beautiful, standardized results of that processing.
 
-**Crucial:** All data arriving in Elasticsearch strictly conforms to the **Open Cybersecurity Schema Framework (OCSF) v1.9.0 - Class 4001 (Network Activity)**. 
+## 2. The Vibe: Professional Industry SIEM Dashboards
+Security Information and Event Management (SIEM) dashboards are like the "Air Traffic Control" for cybersecurity. 
+When designing this, aim for the aesthetic of industry leaders like **Splunk, Datadog, or CrowdStrike**.
 
-### Key OCSF Fields to Utilize:
-*   `time` (Long): The epoch timestamp of the log. **Use this as your primary `@timestamp` for time-series charts.**
-*   `activity_id` (Integer): The action taken by the firewall. `1` = Allow, `2` = Deny, `3` = Reset.
-*   `src_endpoint.ip` (String): Source IP address.
-*   `dst_endpoint.ip` (String): Destination IP address.
-*   `severity` (String) / `severity_id` (Integer): Log severity (e.g., "High" / 6).
-*   `metadata.provenance_hash` (String): PRISM's custom forensic extension. The BLAKE3 hash of the original raw log.
+**Design Principles:**
+1. **Dark Mode is King:** Security analysts stare at these screens for 12 hours a day. Use dark themes (deep blues, dark grays, blacks) to reduce eye strain.
+2. **High Contrast Neon Accents:** Use colors intentionally to draw attention to danger.
+   * 🔴 **Red:** Blocked traffic, high severity threats, attacks.
+   * 🟡 **Yellow/Orange:** Warnings, resets, suspicious activity.
+   * 🟢 **Green:** Allowed, safe, normal traffic.
+   * 🔵 **Blue/Cyan:** Neutral data, volume metrics.
+3. **Data Density but Clean:** They need to see a lot of information at a glance, but it shouldn't look cluttered. Use clear grid layouts, distinct panels, and bold typography for big numbers.
 
-## 3. Required Dashboard Panels
+## 3. The Data We Provide & How to Visualize It
 
-Please implement the following panels in the Kibana Dashboard:
+Our backend sends data to Elasticsearch in a format called **OCSF** (Open Cybersecurity Schema Framework). You don't need to know how it works, just know that you have access to the following fields, and here is how you should visualize them:
 
-### Panel 1: Global Threat Map (Geo-IP)
-*   **Type:** Coordinate Map / Region Map
-*   **Metric:** Count of events.
-*   **Bucket:** Geo-Hash on `src_endpoint.ip` (Requires an ingest pipeline or Logstash GeoIP filter if not enriched prior, or simply assume PRISM will enrich it/use dummy coordinates for the demo).
-*   **Purpose:** Visual eye-candy for the judges showing where attacks are originating.
+### A. The Threat Map (Where are attacks coming from?)
+* **The Data:** `src_endpoint.ip` (The IP address of the person connecting).
+* **The Visualization:** A **Geo-IP / Region Map**. This is the visual centerpiece of the dashboard. It shows a map of the world with glowing dots or heatmaps indicating where traffic is originating. It looks incredibly cool and is a staple of security demos.
 
-### Panel 2: Traffic Disposition (Allowed vs. Blocked)
-*   **Type:** Pie Chart or Donut Chart
-*   **Metric:** Count
-*   **Bucket:** Terms aggregation on `activity_id` or mapped string aliases (Allow, Deny, Reset).
-*   **Colors:** `1` (Allow) = Green, `2` (Deny) = Red, `3` (Reset) = Yellow.
-*   **Purpose:** Proves PRISM can extract firewall actions from completely different vendors and map them to a single metric.
+### B. Traffic Disposition (What did the firewall do?)
+* **The Data:** `activity_id`. This is a number representing the action taken. (`1` = Allowed, `2` = Deny/Blocked, `3` = Reset).
+* **The Visualization:** A **Donut Chart or Pie Chart**. 
+  * Make the "Deny" slice Red.
+  * Make the "Allow" slice Green.
+  * This proves to the judges that PRISM successfully understands actions from all different firewall brands.
 
-### Panel 3: Ingestion Throughput Over Time (EPS)
-*   **Type:** Line Chart / Area Chart (Time Series)
-*   **Y-Axis:** Count of Events
-*   **X-Axis:** Date Histogram on `time` (per second or per 5 seconds).
-*   **Purpose:** Visually mirrors the high EPS count shown on the Ratatui TUI, proving that the normalized data is arriving at the SIEM in real-time.
+### C. Live Throughput (Are we processing fast?)
+* **The Data:** `time` (When the event happened).
+* **The Visualization:** A **Time-Series Area Chart or Line Chart** (EPS - Events Per Second). 
+  * The X-axis is Time.
+  * The Y-axis is the Count of logs.
+  * This chart should look like a pulse, showing a massive spike when we blast 50,000 logs into the system during the demo.
 
-### Panel 4: High Severity Alerts & Forensic Ledger
-*   **Type:** Data Table
-*   **Columns:** 
-    *   `time`
-    *   `severity`
-    *   `src_endpoint.ip`
-    *   `dst_endpoint.ip`
-    *   `activity_id`
-    *   `metadata.provenance_hash`
-*   **Filter:** `severity_id >= 4` (or filter by "High").
-*   **Purpose:** Highlights PRISM's unique **Section 65B Evidentiary Compliance**. The presence of the `provenance_hash` in the SIEM alert allows an analyst to tie the normalized alert back to the exact cryptographically signed raw log in PRISM's Cold Vault.
+### D. The Forensic Ledger (The "Receipts")
+* **The Data:** `severity` (e.g., "High"), `src_endpoint.ip`, `dst_endpoint.ip` (target IP), and crucially, `metadata.provenance_hash`.
+* **The Visualization:** A **Data Table** at the bottom of the dashboard.
+  * Filter this table to only show "High" severity events.
+  * **The `provenance_hash` is our secret weapon:** It looks like a long string of random characters (e.g., `a1b2c3d4...`). To a judge, this proves our system is legally compliant (Section 65B of the Indian Evidence Act), acting as a digital signature for the log. Make sure this column is clearly visible in the table.
 
-## 4. Demo Execution Notes
-During the presentation:
-1.  We will blast 50,000 mixed logs into PRISM.
-2.  The Kibana dashboard should auto-refresh every 1-2 seconds.
-3.  The dashboard should instantly populate with the unified metrics, despite the source data being messy and proprietary. 
-4.  Ensure the dashboard has a clean, dark-mode theme to match the terminal aesthetic of the TUI.
+## 4. Demo Execution (What will happen live)
+When the judges are watching:
+1. The dashboard will be empty.
+2. We will hit "Start" on our backend.
+3. The dashboard should be set to **auto-refresh every 1 second**.
+4. Suddenly, the Map will light up, the Donut chart will spin, and the Line Chart will spike, instantly visualizing thousands of normalized threats. 
+
+Focus on making those visual transitions look smooth, professional, and undeniably "cybersecurity".
