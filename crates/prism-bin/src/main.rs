@@ -7,6 +7,8 @@ use tokio::time;
 use prism_ingest::common::IngestConfig;
 use prism_ingest::dispatcher::Dispatcher;
 use prism_ingest::listener::UdpListener;
+use prism_ingest::tcp::TcpIngest;
+use prism_ingest::file::FileTailer;
 
 use prism_core::router::{HeuristicRouter, Vendor};
 use prism_core::vrl::VrlEngine;
@@ -18,12 +20,19 @@ use prism_provenance::vault::VaultWriter;
 use prism_provenance::merkle::ProvenanceTree;
 use std::fs::OpenOptions;
 use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "PRISM Ingest and Process Pipeline")]
 struct Args {
     #[arg(short, long, default_value = "0.0.0.0:514")]
     udp_bind_addr: std::net::SocketAddr,
+
+    #[arg(short = 't', long)]
+    tcp_bind_addr: Option<std::net::SocketAddr>,
+
+    #[arg(short = 'f', long)]
+    tail_file: Option<PathBuf>,
 
     #[arg(short = 'v', long, default_value = "/tmp/prism/vault")]
     vault_dir: String,
@@ -40,8 +49,8 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     
     println!("=== PRISM STARTED ===");
-    println!("Config: UDP={} Vault={} BatchSize={} ES={:?}", 
-             args.udp_bind_addr, args.vault_dir, args.batch_size, args.es_endpoint);
+    println!("Config: UDP={} TCP={:?} File={:?} Vault={} BatchSize={} ES={:?}", 
+             args.udp_bind_addr, args.tcp_bind_addr, args.tail_file, args.vault_dir, args.batch_size, args.es_endpoint);
     
     let config = IngestConfig {
         udp_bind_addr: args.udp_bind_addr,
@@ -52,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     let dispatcher = Arc::new(Dispatcher::new(&config));
     let sender = dispatcher.sender();
     
-    let listener = UdpListener::new(config, sender).await?;
+    let listener = UdpListener::new(config, sender.clone()).await?;
     
     let prov_rx = dispatcher.provenance_receiver();
     let data_rx = dispatcher.data_receiver();
@@ -68,6 +77,26 @@ async fn main() -> anyhow::Result<()> {
     let _listener_handle = tokio::spawn(async move {
         let _ = listener.run().await;
     });
+
+    // 1b. TcpListener task
+    if let Some(addr) = args.tcp_bind_addr {
+        let tcp_ingest = TcpIngest::new(addr, sender.clone());
+        tokio::spawn(async move {
+            if let Err(e) = tcp_ingest.run().await {
+                eprintln!("TCP Ingest error: {}", e);
+            }
+        });
+    }
+
+    // 1c. FileTailer task
+    if let Some(path) = args.tail_file {
+        let file_tailer = FileTailer::new(path, sender.clone());
+        tokio::spawn(async move {
+            if let Err(e) = file_tailer.run().await {
+                eprintln!("File Tailer error: {}", e);
+            }
+        });
+    }
 
     // 2. Provenance task
     let vault_dir = args.vault_dir.clone();

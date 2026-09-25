@@ -8,6 +8,8 @@ pub type Blake3Hash = blake3::Hash;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LogSource {
     Udp(SocketAddr),
+    NetworkTcp { ip: String, port: u16 },
+    FileTail { path: String, offset: usize },
     Quic(SocketAddr),
     Unknown,
 }
