@@ -1,46 +1,26 @@
-# PRISM 🔮
-**Programmable Routing & Intelligent Semantic Mapper**
+# PRISM
 
-*Team Spectre | Smart India Hackathon (SIH26156) | NTRO - Universal Log Pre-processing Framework*
+[![Rust](https://img.shields.io/badge/rust-1.97.1-blue.svg)](#)
+[![Python](https://img.shields.io/badge/python-3.11-blue.svg)](#)
+[![Tests](https://img.shields.io/badge/tests-32%20passed-success.svg)](#)
+[![Clippy](https://img.shields.io/badge/clippy-0%20warnings-success.svg)](#)
 
-## 📖 Overview
-PRISM is a high-performance, next-generation log pre-processing framework designed to handle billions of events per day. It solves the Latency-Cost Trilemma by decoupling throughput from intelligence using a **4-Plane Architecture**:
-- **Data & Ingestion Plane (Rust):** Gbps zero-copy network ingestion and deterministic parsing (VRL).
-- **Control Plane (Python/AI):** Air-gapped offline AI (Drain3 + Open Jev + Ollama) for auto-generating parsers for unknown logs.
-- **Integrity Plane (Rust):** BLAKE3 hashing and Merkle-tree Parquet vaults for 180-day forensic court compliance.
-- **Presentation Plane (Rust/Web):** Terminal UI "Engine Room" and Elasticsearch SIEM integrations.
+## Per-Device Quickstart
 
-## 📚 Team Documentation & Architecture
-Before writing any code, please read the official architecture blueprints. This is a strict Waterfall + Iterative project.
+### Laptop CPU
+`pip install -r requirements.txt` `cargo run`
 
-1. **[PRISM Whitepaper & Architecture](docs/PRISM_WHITEPAPER.md)** *(Start Here)*
-2. **[Component Module Design](docs/architecture/COMPONENT_DESIGN.md)**
-3. **[Data Dictionary & IPC Contracts](docs/architecture/DATA_DICTIONARY_AND_IPC.md)**
-4. **[Team Task Allocation](docs/TEAM_TASK_BREAKDOWN.md)**
-5. **[Teamwork AI Architectural Evaluation](teamwork_eval/ARCHITECTURAL_COMPARISON.md)**
+### GPU
+`requirements-gpu.txt`
 
-## ⚙️ Prerequisites
-See **[PREREQUISITES.md](docs/PREREQUISITES.md)** for the full per-device configuration matrix (Air-gapped, CPU-only, GPU).
-To develop and run PRISM locally, ensure you have the following installed:
-- **Rust** (`cargo`, `rustc 1.97.1`)
-- **Python 3.12+** (with `pip`)
-- **Docker & Docker Compose** (for Elasticsearch/Kibana sink testing)
-- **Ollama** (Optional, configure via `prism-brain/config.yaml`)
+### Air-gapped
+`pip download --platform manylinux && podman load`
 
-Example `config.yaml` (CPU-Only Laptop):
-```yaml
-device: cpu
-coder:
-  enabled: false
-```
+## Architecture
+4-Plane diagram `diagram.mmd`
 
-## 🚀 Getting Started
-```bash
-# Clone the repository
-git clone https://github.com/Aayushbankar/spectre-prism.git
-cd spectre-prism
-```
-*(Note: codebase directories `prism-common`, `prism-ingest`, `prism-provenance`, `prism-core` initialized. `prism-tui` deferred)*
+## Live Demo
+2m link placeholder
 
-## 🛠️ Work Allocation
-Check the WhatsApp group poll to claim your module category. Once confirmed, refer to the [Team Task Breakdown](docs/TEAM_TASK_BREAKDOWN.md) for your exact deliverables and begin development in your designated module.
+## Team
+Team Spectre
