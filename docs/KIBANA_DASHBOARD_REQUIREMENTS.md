@@ -1,62 +1,82 @@
-# PRISM Kibana Dashboard Design Guide
-**Project:** PRISM (SIH26156)  
-**Target Audience:** UI/UX Designers & Frontend Developers  
+# PRISM Kibana Dashboard Requirements
 
-## 1. Introduction: What are we building?
-We are building the **"Executive View"** dashboard for our PRISM project demo. 
+This document defines the exact data payloads PRISM sends to Elasticsearch and the required Kibana visualizations for the PRISM "Executive View" dashboard.
 
-PRISM is a powerful backend engine that reads messy, completely different security logs from various firewalls (like Cisco, Fortinet, and Palo Alto) and magically transforms them all into one single, clean, standardized format. 
+## 1. The Data Payload (What the Backend Sends)
 
-Your job is to design a dashboard (using Kibana) that visualizes this clean data. During our demo, we will show a split-screen:
-* **Left Screen (The Engine Room):** A matrix-style terminal showing our Rust backend processing 50,000 logs per second.
-* **Right Screen (The Executive View):** The dashboard **you** design, showing the beautiful, standardized results of that processing.
+PRISM ingests raw logs from Cisco, Fortinet, and Palo Alto firewalls, normalizes them, and pushes them to Elasticsearch using the OCSF v1.9.0 (Network Activity) schema via our Rust Data Plane HTTP Bulk Exporter. 
 
-## 2. The Vibe: Professional Industry SIEM Dashboards
-Security Information and Event Management (SIEM) dashboards are like the "Air Traffic Control" for cybersecurity. 
-When designing this, aim for the aesthetic of industry leaders like **Splunk, Datadog, or CrowdStrike**.
+Every single event arriving in Elasticsearch will be a JSON document that looks exactly like this:
 
-**Design Principles:**
-1. **Dark Mode is King:** Security analysts stare at these screens for 12 hours a day. Use dark themes (deep blues, dark grays, blacks) to reduce eye strain.
-2. **High Contrast Neon Accents:** Use colors intentionally to draw attention to danger.
-   * 🔴 **Red:** Blocked traffic, high severity threats, attacks.
-   * 🟡 **Yellow/Orange:** Warnings, resets, suspicious activity.
-   * 🟢 **Green:** Allowed, safe, normal traffic.
-   * 🔵 **Blue/Cyan:** Neutral data, volume metrics.
-3. **Data Density but Clean:** They need to see a lot of information at a glance, but it shouldn't look cluttered. Use clear grid layouts, distinct panels, and bold typography for big numbers.
+```json
+{
+  "category_uid": 4,
+  "class_uid": 4001,
+  "activity_id": 2,
+  "time": 1727271900,
+  "src_endpoint": {
+    "ip": "203.0.113.45"
+  },
+  "dst_endpoint": {
+    "ip": "10.0.5.50"
+  },
+  "severity_id": 6,
+  "severity": "High",
+  "metadata": {
+    "provenance_hash": "8a9b7c6d5e4f3a2b1c...",
+    "vault_uri": "/vault/batch-942.parquet"
+  }
+}
+```
 
-## 3. The Data We Provide & How to Visualize It
+### Field Definitions:
+* **`time`**: Epoch timestamp of the event.
+* **`activity_id`**: The firewall action. `1` (Allow), `2` (Deny), `3` (Reset).
+* **`src_endpoint.ip`**: The IP address of the source.
+* **`dst_endpoint.ip`**: The destination IP address.
+* **`severity` / `severity_id`**: Threat level (e.g., "High" / 6, "Low" / 3, "Unknown" / 1).
+* **`metadata.provenance_hash`**: The BLAKE3 cryptographic hash of the original raw log.
+* **`metadata.vault_uri`**: Reference to the cold storage Parquet file.
 
-Our backend sends data to Elasticsearch in a format called **OCSF** (Open Cybersecurity Schema Framework). You don't need to know how it works, just know that you have access to the following fields, and here is how you should visualize them:
+---
 
-### A. The Threat Map (Where are attacks coming from?)
-* **The Data:** `src_endpoint.ip` (The IP address of the person connecting).
-* **The Visualization:** A **Geo-IP / Region Map**. This is the visual centerpiece of the dashboard. It shows a map of the world with glowing dots or heatmaps indicating where traffic is originating. It looks incredibly cool and is a staple of security demos.
+## 2. Required Dashboard Visualizations
 
-### B. Traffic Disposition (What did the firewall do?)
-* **The Data:** `activity_id`. This is a number representing the action taken. (`1` = Allowed, `2` = Deny/Blocked, `3` = Reset).
-* **The Visualization:** A **Donut Chart or Pie Chart**. 
-  * Make the "Deny" slice Red.
-  * Make the "Allow" slice Green.
-  * This proves to the judges that PRISM successfully understands actions from all different firewall brands.
+You must build the following Kibana panels mapping exactly to the backend fields provided above.
 
-### C. Live Throughput (Are we processing fast?)
-* **The Data:** `time` (When the event happened).
-* **The Visualization:** A **Time-Series Area Chart or Line Chart** (EPS - Events Per Second). 
-  * The X-axis is Time.
-  * The Y-axis is the Count of logs.
-  * This chart should look like a pulse, showing a massive spike when we blast 50,000 logs into the system during the demo.
+### A. Global Threat Map
+* **Visualization:** Coordinate Map / Region Map
+* **Input Field:** `src_endpoint.ip`
+* **How it works:** Elasticsearch will geolocate the `src_endpoint.ip`. Plot these coordinates on the map.
+* **Example:** IP `203.0.113.45` plots to a specific latitude/longitude, represented by a red dot if blocked, or a heatmap cluster.
 
-### D. The Forensic Ledger (The "Receipts")
-* **The Data:** `severity` (e.g., "High"), `src_endpoint.ip`, `dst_endpoint.ip` (target IP), and crucially, `metadata.provenance_hash`.
-* **The Visualization:** A **Data Table** at the bottom of the dashboard.
-  * Filter this table to only show "High" severity events.
-  * **The `provenance_hash` is our secret weapon:** It looks like a long string of random characters (e.g., `a1b2c3d4...`). To a judge, this proves our system is legally compliant (Section 65B of the Indian Evidence Act), acting as a digital signature for the log. Make sure this column is clearly visible in the table.
+### B. Traffic Action Breakdown
+* **Visualization:** Donut Chart or Pie Chart
+* **Input Field:** `activity_id`
+* **How it works:** Group the events by `activity_id`.
+* **Example Map:** 
+  * `1` -> "Allowed" (Color: Green)
+  * `2` -> "Denied" (Color: Red)
+  * `3` -> "Reset" (Color: Yellow)
 
-## 4. Demo Execution (What will happen live)
-When the judges are watching:
-1. The dashboard will be empty.
-2. We will hit "Start" on our backend.
-3. The dashboard should be set to **auto-refresh every 1 second**.
-4. Suddenly, the Map will light up, the Donut chart will spin, and the Line Chart will spike, instantly visualizing thousands of normalized threats. 
+### C. Live Ingestion Throughput (EPS)
+* **Visualization:** Time-Series Line Chart or Area Chart
+* **Input Field:** `time` (X-axis) and Event Count (Y-axis)
+* **How it works:** A standard EPS (Events Per Second) graph. Group the timestamp by 1-second intervals.
+* **Example:** At exactly `1727271900`, the chart should spike to show `50,000` events hitting the system simultaneously during our load test.
 
-Focus on making those visual transitions look smooth, professional, and undeniably "cybersecurity".
+### D. Forensic Event Ledger
+* **Visualization:** Data Table
+* **Input Fields:** `time`, `severity`, `src_endpoint.ip`, `dst_endpoint.ip`, `activity_id`, `metadata.provenance_hash`
+* **How it works:** A raw table showing the most recent high-severity alerts. 
+* **Requirement:** The `metadata.provenance_hash` MUST be visible. This hexadecimal string proves PRISM's compliance with Section 65B of the Indian Evidence Act (cryptographic traceability) and links the Elasticsearch UI back to the immutable vault.
+* **Example Row:** 
+  * Time: `Oct 14, 2026 @ 10:15:00`
+  * Severity: `High`
+  * Source: `203.0.113.45`
+  * Action: `2` (Denied)
+  * Hash: `8a9b7c6d5e4f3a2b1c...`
+
+## 3. Demo Environment Constraints
+* **Refresh Rate:** Set the Kibana dashboard to auto-refresh every 1 second.
+* **Theme:** Use the Kibana Dark Theme to match the Ratatui terminal UI running on the primary screen.
