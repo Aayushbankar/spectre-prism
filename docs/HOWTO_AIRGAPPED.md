@@ -1,33 +1,51 @@
-# HOW-TO: Air-gapped Deployment
+# HOW-TO: Air-Gapped Deployment
 
-This runbook describes how to deploy PRISM in a completely disconnected NTRO environment.
+PRISM is designed explicitly for NTRO and highly secure SIH environments where no internet connection is available (Section 65B compliance).
 
-## 1. Fetching Dependencies (Online Machine)
-First, download all required Python wheels and model weights:
+## 1. Preparation on an Internet-Connected Machine
+Before moving to the air-gapped site, download all necessary packages and container images.
+
+### Python Dependencies (Wheels)
+Download all wheels matching the target OS (`manylinux` for typical Linux servers):
 ```bash
-pip download -r requirements.txt --platform manylinux2014_x86_64 --only-binary=:all:
-wget https://huggingface.co/lmstudio-community/Meta-Llama-3-8B-Instruct-GGUF/resolve/main/Meta-Llama-3-8B-Instruct-Q4_K_M.gguf
+pip download --platform manylinux2014_x86_64 --only-binary=:all: -r requirements.txt -d ./offline-wheels
 ```
-Save the offline container images:
+
+### Docker/Podman Images
+Pull the required Elasticsearch and Kibana images, then export them to a tarball:
 ```bash
 docker pull docker.elastic.co/elasticsearch/elasticsearch:8.13.4
-docker save docker.elastic.co/elasticsearch/elasticsearch:8.13.4 -o elastic.tar
+docker pull docker.elastic.co/kibana/kibana:8.13.4
+docker save -o prism-images.tar docker.elastic.co/elasticsearch/elasticsearch:8.13.4 docker.elastic.co/kibana/kibana:8.13.4
 ```
 
-## 2. Transfer
-Transfer all `.whl`, `.gguf`, and `.tar` files to the air-gapped machine via a secure USB drive.
+### LLM Weights
+Download the quantized Llama GGUF models:
+```bash
+wget https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/main/llama-2-7b-chat.Q4_K_M.gguf -O ./models/llama-2-7b.gguf
+```
 
-## 3. Offline Installation (Air-gapped Machine)
-Load the container images using Podman (daemonless):
+## 2. Transfer via Secure Media
+Transfer the `./offline-wheels`, `prism-images.tar`, `./models`, and the compiled PRISM binary (via `cargo build --release`) using a secure USB or CD.
+
+## 3. Installation on Air-Gapped Server
+
+### Install Python Packages
+Install directly from the local directory without querying PyPI:
 ```bash
-podman load -i elastic.tar
+pip install --no-index --find-links=./offline-wheels -r requirements.txt
 ```
-Install the Python dependencies from the local directory:
+
+### Load Container Images (Podman/Docker)
 ```bash
-pip install --no-index --find-links=/path/to/wheels -r requirements.txt
+podman load -i prism-images.tar
 ```
-Start the local stack:
+
+### Run the Stack
+Boot the background services and start PRISM:
 ```bash
 docker compose up -d
-cargo run
+cargo run --release
 ```
+
+All functionalities—including Drain3 clustering, Laya triage, and Llama.cpp VRL generation—will execute completely disconnected from the internet.

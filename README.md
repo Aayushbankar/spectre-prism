@@ -6,15 +6,16 @@
 [![Clippy](https://img.shields.io/badge/clippy-0%20warnings-success.svg)](#)
 
 ## Overview
-PRISM is a highly performant, air-gapped Universal Log Parsing Framework built for Smart India Hackathon 2026 (Problem Statement 26156). It ingests, normalizes, and stores massive volumes of raw logs, providing real-time analytics and anomaly detection.
+PRISM is a highly performant, air-gapped Universal Log Parsing Framework built for Smart India Hackathon 2026 (Problem Statement 26156). It ingests, normalizes, and stores massive volumes of raw logs, providing real-time analytics and anomaly detection. 
 
 ## Architecture
-The framework is divided into five planes:
-1. **Ingest Plane**: High-throughput UDP/TCP reception with zero per-packet allocation.
-2. **Integrity/Vault Plane**: Cold storage via Parquet 2.0 with ZSTD compression and Merkle tree auditing.
-3. **Data Plane**: VRL execution engine for OCSF schema normalization.
-4. **Control Plane**: Python-based AI triage using Drain3 and Laya (ModernBERT).
-5. **Presentation Plane**: Kibana threat maps and Ratatui TUI dashboard.
+The framework is divided into five robust planes:
+
+1. **Ingest Plane**: High-throughput UDP/TCP reception with zero per-packet allocation using `BytesMut` chunks (10MiB). Handles 800M+ events per day.
+2. **Integrity/Vault Plane**: Cold storage using Parquet 2.0 with ZSTD compression across all columns. Secures data admissibility under Section 65B of the Indian Evidence Act via Merkle tree auditing and cryptographic hashing (`blake3`).
+3. **Data Plane**: VRL execution engine for routing and parsing logic. Translates disparate vendor formats (Fortinet, Cisco ASA, Palo Alto) into the Open Cybersecurity Schema Framework (OCSF) schema. Includes a robust Dead Letter Queue (DLQ).
+4. **Control Plane**: Python-based AI triage layer. Employs Drain3 for log template mining and Laya (ModernBERT 421M) for semantic classification, alongside a human-in-the-loop (HitL) Gatekeeper.
+5. **Presentation Plane**: Kibana threat maps for geographic visualization and a Ratatui-based TUI dashboard for low-latency command-line observability.
 
 ![Architecture Diagram](diagram.mmd)
 
@@ -35,7 +36,7 @@ cargo run
 ### Air-gapped (NTRO)
 ```bash
 pip download --platform manylinux -r requirements.txt
-# Transfer files
+# Transfer files via secure media
 podman load -i prism-images.tar
 docker compose up -d
 ```
@@ -43,24 +44,24 @@ docker compose up -d
 ## Performance & Benchmarks
 - **Python E2E**: 9,223 EPS
 - **Rust Router**: 325,000 EPS
-- **Throughput**: 800M/day to 28B/day
+- **Throughput**: 800M/day to 28B/day extrapolated.
 - **Latency**: p99 < 25µs
 - **Allocation**: Zero per-packet allocation amortized buffer.
 
 ## SIH PS 26156 Compliance
-| Requirement | Status |
-| --- | --- |
-| a. Multi-format Ingestion | Compliant (syslog, JSON, CSV) |
-| b. OCSF Normalization | Compliant |
-| c. AI-driven Parsing | Compliant (Drain3 + Laya) |
-| d. High Throughput | Compliant (>300k EPS) |
-| e. Cold Storage | Compliant (Parquet + ZSTD) |
-| f. Integrity Proofs | Compliant (Merkle Trees) |
-| g. Air-gapped Deployment | Compliant |
-| h. Real-time Dashboard | Compliant (Ratatui TUI) |
-| i. Extensible Rules | Compliant (VRL) |
-| j. Dead Letter Queue | Compliant |
-| k. Threat Intelligence | Compliant |
+| Requirement | Status | Details |
+| --- | --- | --- |
+| a. Multi-format Ingestion | Compliant | syslog, JSON, CSV |
+| b. OCSF Normalization | Compliant | Category 4, Class 4001 (Network Activity) |
+| c. AI-driven Parsing | Compliant | Drain3 O(n) + Laya (ModernBERT) |
+| d. High Throughput | Compliant | >300k EPS on Rust Plane |
+| e. Cold Storage | Compliant | Parquet + ZSTD Compression |
+| f. Integrity Proofs | Compliant | Merkle Trees (`rs_merkle`), `ledger.log` |
+| g. Air-gapped Deployment | Compliant | Fully disconnected runbooks provided |
+| h. Real-time Dashboard | Compliant | Ratatui TUI |
+| i. Extensible Rules | Compliant | VRL hot-reloading |
+| j. Dead Letter Queue | Compliant | Dual-write plaintext & JSONL |
+| k. Threat Intelligence | Compliant | Mapped via AI triage |
 
 ## Verification
 - **Tests**: 32 tests passed (15 Rust, 17 Python), 0 failures.
