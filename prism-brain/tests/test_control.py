@@ -33,7 +33,7 @@ def run_pipeline(config):
     
     # Use default Gatekeeper (which falls back to /tmp/prism/rules when /etc is denied)
     gatekeeper = Gatekeeper()
-    vrl_path = gatekeeper.approve_and_deploy(device_type, vrl_code, "nginx_signature")
+    vrl_path = gatekeeper.approve_and_deploy(device_type, vrl_code, "nginx_signature", nginx_log)
     
     assert os.path.exists(vrl_path)
     assert os.path.exists(vrl_path.replace(".vrl", ".yaml"))

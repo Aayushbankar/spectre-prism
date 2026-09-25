@@ -76,7 +76,7 @@ def test_e2e_52k_throughput():
             if cluster_result.get("change_type") != "none":
                 device_type = triage.classify(cluster_result["template"])
                 vrl = coder.generate_vrl(cluster_result["template"], device_type)
-                gatekeeper.approve_and_deploy(device_type, vrl, "auto_signature")
+                gatekeeper.approve_and_deploy(device_type, vrl, "auto_signature", raw)
             count += 1
             
     duration = time.time() - start_time
