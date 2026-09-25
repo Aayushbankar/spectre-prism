@@ -42,11 +42,35 @@ struct Args {
 
     #[arg(short, long)]
     es_endpoint: Option<String>,
+
+    #[arg(long)]
+    dry_run_vrl: Option<PathBuf>,
+
+    #[arg(long)]
+    payload: Option<String>,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    
+    if let Some(vrl_path) = &args.dry_run_vrl {
+        if let Some(payload) = &args.payload {
+            match VrlEngine::run_dry_run(vrl_path, payload) {
+                Ok(json) => {
+                    println!("{}", json);
+                    std::process::exit(0);
+                }
+                Err(e) => {
+                    eprintln!("Dry run failed: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        } else {
+            eprintln!("--payload is required when using --dry-run-vrl");
+            std::process::exit(1);
+        }
+    }
     
     println!("=== PRISM STARTED ===");
     println!("Config: UDP={} TCP={:?} File={:?} Vault={} BatchSize={} ES={:?}", 

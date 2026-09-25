@@ -35,7 +35,7 @@ def test_gatekeeper_hot_reload():
         shutil.rmtree(rules_dir)
         
     gk = Gatekeeper(rules_dir)
-    vrl_path = gk.approve_and_deploy("Web Proxy", ".ip = parse_regex...", "sig123")
+    vrl_path = gk.approve_and_deploy("Web Proxy", r".ip = parse_regex!(string!(.message), r'(?P<ip>\d+\.\d+\.\d+\.\d+)').ip", "sig123", "192.168.1.1")
     
     assert os.path.exists(vrl_path)
     yaml_path = vrl_path.replace(".vrl", ".yaml")
@@ -93,7 +93,7 @@ def test_e2e_1000_heuristic():
                 vrl_code = coder.generate_vrl(result["template_mined"], device_type)
                 
                 # 4. Gatekeeper
-                gk.approve_and_deploy(device_type, vrl_code, result["template_mined"])
+                gk.approve_and_deploy(device_type, vrl_code, result["template_mined"], payload)
                 
             count += 1
             

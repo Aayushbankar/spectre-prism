@@ -9,6 +9,7 @@ blake3 = "1.8.7"
 bytes = "1.12.1"
 chrono = "0.4.45"
 memchr = "2.8.3"
+notify = "8.2.0"
 prism-common = { version = "0.1.0", path = "../prism-common" }
 regex = "1.13.1"
 reqwest = { version = "0.13.5", features = ["json"] }
