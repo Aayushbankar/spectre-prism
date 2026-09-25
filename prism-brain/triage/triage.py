@@ -29,9 +29,16 @@ class TriageEngine:
             import transformers
             import torch
             logger.info("Triage: open-jev (GPU/Transformers)")
-            return self._heuristic_fallback(template)
+            # Initialize model if not already done, then run it.
+            # Assuming a generic pipeline call since full model code isn't provided.
+            classifier = transformers.pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+            result = classifier(template, self.categories)
+            return result['labels'][0]
         except ImportError:
             logger.warning("Triage: transformers not found, fallback to heuristic (CPU-only)")
+            return self._heuristic_fallback(template)
+        except Exception as e:
+            logger.error(f"Triage: model execution failed: {e}. Fallback to heuristic.")
             return self._heuristic_fallback(template)
 
     def _heuristic_fallback(self, template: str) -> str:

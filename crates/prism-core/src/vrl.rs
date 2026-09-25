@@ -8,35 +8,59 @@ use vrl::{
 use crate::router::Vendor;
 
 pub struct VrlEngine {
-    fortinet_program: Program,
-    cisco_program: Program,
+    fortinet_programs: Vec<Program>,
+    cisco_programs: Vec<Program>,
     palo_program: Program,
 }
 
 impl VrlEngine {
     pub fn new() -> Result<Self> {
-        // Fallible operations in VRL use `!` but we want to ignore errors if it doesn't match perfectly,
-        // or just let it fail. Actually parse_regex! doesn't return an error in VRL 0.35 if coalesced? 
-        // Wait, the error coalescing `??` caused a compile error. We'll just use parse_regex!()
-        // and if it aborts at runtime, we return the original value.
-        let fortinet_script = r#"
-            .ip = parse_regex!(string!(.message), r'srcip=(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
-        "#;
-        let cisco_script = r#"
-            .ip = parse_regex!(string!(.message), r'outside:(?P<ip>\d+\.\d+\.\d+\.\d+)').ip
-        "#;
+        let fortinet_scripts = vec![
+            r#".srcip = parse_regex!(string!(.message), r'srcip=(?P<srcip>\d+\.\d+\.\d+\.\d+)').srcip"#,
+            r#".dstip = parse_regex!(string!(.message), r'dstip=(?P<dstip>\d+\.\d+\.\d+\.\d+)').dstip"#,
+            r#".srcport = parse_regex!(string!(.message), r'srcport=(?P<srcport>\d+)').srcport"#,
+            r#".dstport = parse_regex!(string!(.message), r'dstport=(?P<dstport>\d+)').dstport"#,
+            r#".action = parse_regex!(string!(.message), r'action="(?P<action>[^"]+)"').action"#,
+            r#".proto = parse_regex!(string!(.message), r'proto=(?P<proto>\d+)').proto"#,
+            r#".sentbyte = parse_regex!(string!(.message), r'sentbyte=(?P<sentbyte>\d+)').sentbyte"#,
+            r#".rcvdbyte = parse_regex!(string!(.message), r'rcvdbyte=(?P<rcvdbyte>\d+)').rcvdbyte"#,
+            r#".level = parse_regex!(string!(.message), r'level="(?P<level>[^"]+)"').level"#,
+        ];
+
+        let cisco_scripts = vec![
+            r#".srcip = parse_regex!(string!(.message), r'outside:(?P<srcip>\d+\.\d+\.\d+\.\d+)').srcip"#,
+            r#".srcport = parse_regex!(string!(.message), r'outside:\d+\.\d+\.\d+\.\d+/(?P<srcport>\d+)').srcport"#,
+            r#".dstip = parse_regex!(string!(.message), r'inside:(?P<dstip>\d+\.\d+\.\d+\.\d+)').dstip"#,
+            r#".dstport = parse_regex!(string!(.message), r'inside:\d+\.\d+\.\d+\.\d+/(?P<dstport>\d+)').dstport"#,
+            r#".msgid = parse_regex!(string!(.message), r'%ASA-\d-(?P<msgid>\d+)').msgid"#,
+        ];
+
         let palo_script = r#"
-            .ip = parse_regex!(string!(.message), r',(?P<ip>\d+\.\d+\.\d+\.\d+),').ip
+            parts = split(string!(.message), ",")
+            .srcip = parts[7]
+            .dstip = parts[8]
+            .srcport = parts[24]
+            .dstport = parts[25]
+            .action = parts[29]
         "#;
 
         let fns = all();
-        let fortinet_program = compile(fortinet_script, &fns).map_err(|_| anyhow::anyhow!("Fortinet VRL compile error"))?.program;
-        let cisco_program = compile(cisco_script, &fns).map_err(|_| anyhow::anyhow!("Cisco VRL compile error"))?.program;
+        
+        let fortinet_programs: Result<Vec<Program>, _> = fortinet_scripts.into_iter()
+            .map(|s| compile(s, &fns).map(|res| res.program))
+            .collect();
+        let fortinet_programs = fortinet_programs.map_err(|_| anyhow::anyhow!("Fortinet VRL compile error"))?;
+
+        let cisco_programs: Result<Vec<Program>, _> = cisco_scripts.into_iter()
+            .map(|s| compile(s, &fns).map(|res| res.program))
+            .collect();
+        let cisco_programs = cisco_programs.map_err(|_| anyhow::anyhow!("Cisco VRL compile error"))?;
+
         let palo_program = compile(palo_script, &fns).map_err(|_| anyhow::anyhow!("Palo VRL compile error"))?.program;
         
         Ok(Self {
-            fortinet_program,
-            cisco_program,
+            fortinet_programs,
+            cisco_programs,
             palo_program,
         })
     }
@@ -56,16 +80,21 @@ impl VrlEngine {
         let tz = TimeZone::default();
         let mut ctx = Context::new(&mut target, &mut state, &tz);
 
-        let res = match vendor {
-            Vendor::Fortinet => self.fortinet_program.resolve(&mut ctx),
-            Vendor::CiscoAsa => self.cisco_program.resolve(&mut ctx),
-            Vendor::PaloAlto => self.palo_program.resolve(&mut ctx),
+        match vendor {
+            Vendor::Fortinet => {
+                for prog in &self.fortinet_programs {
+                    let _ = prog.resolve(&mut ctx);
+                }
+            }
+            Vendor::CiscoAsa => {
+                for prog in &self.cisco_programs {
+                    let _ = prog.resolve(&mut ctx);
+                }
+            }
+            Vendor::PaloAlto => {
+                let _ = self.palo_program.resolve(&mut ctx);
+            }
             Vendor::Unknown => bail!("Unknown vendor, cannot parse"),
-        };
-        
-        // If VRL fails at runtime, we just return the unparsed object.
-        if let Err(e) = res {
-            bail!("VRL runtime error: {:?}", e);
         }
         
         Ok(target.value)

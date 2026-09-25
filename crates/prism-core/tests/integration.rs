@@ -59,6 +59,23 @@ async fn test_data_plane_routing() {
         assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str());
         assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5");
         
+        match i % 3 {
+            0 => {
+                assert_eq!(ocsf.dst_endpoint.ip, "8.8.8.8");
+                assert_eq!(ocsf.severity_id, 2);
+                assert_eq!(ocsf.activity_id, 1);
+            }
+            1 => {
+                assert_eq!(ocsf.dst_endpoint.ip, "10.0.0.1");
+                assert_eq!(ocsf.src_endpoint.port, 54321);
+                assert_eq!(ocsf.dst_endpoint.port, 80);
+                assert_eq!(ocsf.severity_id, 1);
+            }
+            _ => {
+                assert_eq!(ocsf.severity_id, 1);
+            }
+        }
+        
         batch.push(ocsf);
         if batch.len() >= 10000 {
             let sink = HttpSink::new("http://localhost:9200/prism-ocsf/_bulk");
@@ -127,6 +144,8 @@ async fn test_sink_http_mock() {
             vault_uri: "local".to_string(),
             provenance_hash: "hash".to_string(),
         },
+        unmapped: None,
+        network: None,
     }];
 
     let res = sink.push_bulk(&batch).await;

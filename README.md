@@ -24,13 +24,15 @@ The framework is divided into five robust planes:
 ### Laptop CPU
 ```bash
 pip install -r requirements.txt
-cargo run
+cargo build --release -p prism
+./target/release/prism
 ```
 
 ### GPU Workstation
 ```bash
 pip install -r requirements-gpu.txt
-cargo run
+cargo build --release -p prism
+./target/release/prism
 ```
 
 ### Air-gapped (NTRO)
@@ -43,8 +45,8 @@ docker compose up -d
 
 ## Performance & Benchmarks
 - **Python E2E**: 9,223 EPS
-- **Rust Router**: 325,000 EPS
-- **Throughput**: 800M/day to 28B/day extrapolated.
+- **Rust Router**: 325,000 EPS (router-only microbenchmark)
+- **Throughput**: Actual full-pipeline EPS to be measured.
 - **Latency**: p99 < 25µs
 - **Allocation**: Zero per-packet allocation amortized buffer.
 
@@ -53,18 +55,18 @@ docker compose up -d
 | --- | --- | --- |
 | a. Multi-format Ingestion | Compliant | syslog, JSON, CSV |
 | b. OCSF Normalization | Compliant | Category 4, Class 4001 (Network Activity) |
-| c. AI-driven Parsing | Compliant | Drain3 O(n) + Laya (ModernBERT) |
-| d. High Throughput | Compliant | >300k EPS on Rust Plane |
+| c. AI-driven Parsing | Partial | Drain3 template mining (active) + Laya semantic classification (experimental, CPU-only fallback) |
+| d. High Throughput | Partial | >300k EPS on Rust Plane (router only) |
 | e. Cold Storage | Compliant | Parquet + ZSTD Compression |
 | f. Integrity Proofs | Compliant | Merkle Trees (`rs_merkle`), `ledger.log` |
 | g. Air-gapped Deployment | Compliant | Fully disconnected runbooks provided |
 | h. Real-time Dashboard | Compliant | Ratatui TUI |
 | i. Extensible Rules | Compliant | VRL hot-reloading |
 | j. Dead Letter Queue | Compliant | Dual-write plaintext & JSONL |
-| k. Threat Intelligence | Compliant | Mapped via AI triage |
+| k. Threat Intelligence | In Progress | Mapped via AI triage |
 
 ## Verification
-- **Tests**: 32 tests passed (15 Rust, 17 Python), 0 failures.
+- **Tests**: 30 passed, 2 skipped (tautological tests replaced/removed), 0 failures.
 - **Lints**: 0 clippy warnings.
 
 [Live Demo 2m link](https://example.com/demo)

@@ -3,7 +3,8 @@ pub mod vrl;
 pub mod ocsf;
 pub mod dlq;
 pub mod sink;
-
+pub mod accounting;
+pub mod fidelity;
 pub use router::HeuristicRouter;
 pub use vrl::VrlEngine;
 pub use dlq::DeadLetterQueue;

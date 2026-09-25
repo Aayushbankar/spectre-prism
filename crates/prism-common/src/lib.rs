@@ -85,6 +85,14 @@ pub struct VaultMetadata {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkInfo {
+    pub protocol: String,
+    pub direction: String,
+    pub bytes_in: u64,
+    pub bytes_out: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OcsfNetworkActivity {
     pub activity_id: u32,
     pub category_uid: u32,
@@ -100,6 +108,8 @@ pub struct OcsfNetworkActivity {
     pub observables: Vec<String>,
     pub raw_data: Option<String>,
     pub metadata: VaultMetadata,
+    pub unmapped: Option<serde_json::Value>,
+    pub network: Option<NetworkInfo>,
 }
 
 #[cfg(test)]
