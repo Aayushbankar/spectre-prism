@@ -17,7 +17,7 @@ The framework is divided into five robust planes:
 4. **Control Plane**: Python-based AI triage layer. Employs Drain3 for log template mining and Laya (ModernBERT 421M) for semantic classification, alongside a human-in-the-loop (HitL) Gatekeeper.
 5. **Presentation Plane**: Kibana threat maps for geographic visualization and a Ratatui-based TUI dashboard for low-latency command-line observability.
 
-![Architecture Diagram](diagram.mmd)
+![Architecture Diagram](docs/images/arch.png)
 
 ## Quickstart
 
