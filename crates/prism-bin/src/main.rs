@@ -56,7 +56,15 @@ async fn main() -> anyhow::Result<()> {
     
     if let Some(vrl_path) = &args.dry_run_vrl {
         if let Some(payload) = &args.payload {
-            match VrlEngine::run_dry_run(vrl_path, payload) {
+            let actual_payload = if payload == "-" {
+                let mut buf = String::new();
+                std::io::Read::read_to_string(&mut std::io::stdin(), &mut buf).unwrap();
+                buf
+            } else {
+                payload.clone()
+            };
+            
+            match VrlEngine::run_dry_run(vrl_path, &actual_payload) {
                 Ok(json) => {
                     println!("{}", json);
                     std::process::exit(0);
