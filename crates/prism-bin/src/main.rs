@@ -248,6 +248,9 @@ async fn main() -> anyhow::Result<()> {
                 let eps = (current_processed - last_processed) / 5;
                 last_processed = current_processed;
                 
+                let stats = format!(r#"{{"eps": {}, "processed": {}, "drops": {}, "dlq": {}}}"#, eps, current_processed, drops, current_dlq);
+                let _ = std::fs::write("/tmp/prism_metrics.json", &stats);
+                
                 println!("[STATS] EPS: {} | Processed: {} | Drops: {} | DLQ: {}", 
                          eps, current_processed, drops, current_dlq);
             }
