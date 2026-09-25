@@ -2,5 +2,6 @@
 members = [
     "crates/prism-common", "crates/prism-core",
     "crates/prism-ingest", "crates/prism-provenance", "crates/prism-tui",
+    "crates/prism-bin"
 ]
 resolver = "2"

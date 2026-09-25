@@ -12,7 +12,7 @@ memchr = "2.8.3"
 prism-common = { version = "0.1.0", path = "../prism-common" }
 regex = "1.13.1"
 reqwest = { version = "0.13.5", features = ["json"] }
-serde = "1.0.229"
+serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 tokio = "1.53.1"
 vrl = "0.35.0"

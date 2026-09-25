@@ -1,24 +1,23 @@
-import subprocess
 import os
+import subprocess
 
-def test_airgapped_pip_download():
-    # Simulate airgapped pip by running pip download without index access
-    try:
-        result = subprocess.run(
-            ["python", "-m", "pip", "download", "--no-index", "--no-deps", "pip"], 
-            capture_output=True, text=True
-        )
-        assert "--no-index" in result.args
-    except FileNotFoundError:
-        pass
+def test_rust_binary_builds_static():
+    """Verify the prism binary can be built (prerequisite for air-gap)."""
+    result = subprocess.run(
+        ["cargo", "build", "--workspace"],
+        capture_output=True, text=True,
+        cwd=os.path.join(os.path.dirname(__file__), "../..") 
+    )
+    assert result.returncode == 0, f"cargo build failed: {result.stderr}"
 
-def test_container_podman_check():
-    # Check if podman is installed or can be mocked
-    try:
-        result = subprocess.run(
-            ["podman", "--version"], 
-            capture_output=True, text=True
-        )
-        assert "podman" in result.args or result.returncode != 0
-    except FileNotFoundError:
-        pass # Podman not installed in this environment
+def test_no_network_dependencies_in_core():
+    """Verify core pipeline has no hardcoded external URLs."""
+    import re
+    core_dir = os.path.join(os.path.dirname(__file__), "../../crates")
+    for root, dirs, files in os.walk(core_dir):
+        for f in files:
+            if f.endswith('.rs'):
+                content = open(os.path.join(root, f)).read()
+                # Should not contain hardcoded external URLs (localhost/internal is OK)
+                external_urls = re.findall(r'https?://(?!localhost|127\.0\.0\.1|0\.0\.0\.0)[^"\s]+', content)
+                assert len(external_urls) == 0, f"External URL found in {f}: {external_urls}"
