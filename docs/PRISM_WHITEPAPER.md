@@ -1,5 +1,5 @@
 # Project PRISM: Official Technical Whitepaper
-**Name:** Programmable Routing & Intelligent Semantic Mapper (PRISM)
+**Project Name:** Programmable Routing & Intelligent Semantic Mapper (PRISM)
 **Target:** Universal Log Pre-processing Framework (SIH26156 - NTRO)
 **Team:** SPECTRE
 **Classification:** Technical Defense & Architecture Document

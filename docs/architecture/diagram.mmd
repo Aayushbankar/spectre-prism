@@ -11,3 +11,4 @@ graph TD
     B -->|Raw bytes + hash| D[PLANE 4: INTEGRITY PLANE]
     C -->|Parse Failure| E[Dead Letter Queue]
     E --> F[PLANE 3: CONTROL PLANE]
+    C -->|Export| G[PLANE 5: PRESENTATION PLANE]

@@ -74,6 +74,8 @@
                                    Hot-Reloaded by Data Plane
 ```
 
+![Architecture Diagram](docs/images/arch.png)
+
 ---
 
 ## 3. Tech Stack Locked In
