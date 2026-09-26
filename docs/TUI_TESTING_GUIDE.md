@@ -23,9 +23,10 @@ cargo run -p prism-tui
 *Note: The dashboard will look mostly empty until the PRISM backend starts pumping data.*
 
 ## Step 3: Start the PRISM Backend Engine (Terminal 2)
-In another terminal, start the main data plane:
+In another terminal, compile and start the main data plane directly as root (so it can bind to UDP 514):
 ```bash
-cargo run --release -p prism --bin prism
+cargo build --release -p prism --bin prism
+sudo ./target/release/prism
 ```
 *The engine will bind to UDP port `514` and start recording metrics. Your TUI's EPS chart will instantly connect and show `0 EPS` rather than being frozen.*
 
