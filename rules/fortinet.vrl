@@ -1,0 +1,23 @@
+# Basic Fortinet VRL mapping to OCSF
+. = parse_key_value!(.message)
+.class_uid = 4001
+.activity_id = 1
+
+.device = {}
+.device.vendor = "Fortinet"
+.device.product = "FortiGate"
+
+.src_endpoint = {}
+.src_endpoint.ip = .srcip
+.src_endpoint.port = .srcport
+
+.dst_endpoint = {}
+.dst_endpoint.ip = .dstip
+.dst_endpoint.port = .dstport
+
+.action = .action
+.network = {}
+.network.sent_bytes = .sentbyte
+.network.received_bytes = .rcvdbyte
+.network.protocol = .proto
+.network.duration = .duration

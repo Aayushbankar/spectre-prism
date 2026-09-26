@@ -1,0 +1,18 @@
+# Basic Cisco ASA VRL mapping to OCSF
+. = parse_syslog!(.message)
+.class_uid = 4001
+.activity_id = 1
+
+.device = {}
+.device.vendor = "Cisco"
+.device.product = "ASA"
+
+parsed = parse_regex!(.message, r'%ASA-\d+-\d+: .*? src (?P<src_ip>\d+\.\d+\.\d+\.\d+)/(?P<src_port>\d+) dst (?P<dst_ip>\d+\.\d+\.\d+\.\d+)/(?P<dst_port>\d+)')
+
+.src_endpoint = {}
+.src_endpoint.ip = parsed.src_ip
+.src_endpoint.port = parsed.src_port
+
+.dst_endpoint = {}
+.dst_endpoint.ip = parsed.dst_ip
+.dst_endpoint.port = parsed.dst_port
