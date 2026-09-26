@@ -209,31 +209,30 @@ Development proceeds bottom-to-top, ensuring each layer rests on a battle-tested
   4. `dlq`: Dead Letter Queue file sink (`/var/run/prism/dlq.log`) for unrecognized logs.
   5. `sink`: HTTP Bulk Exporter (`reqwest`) pushing to SIEM.
 * **Testing Gate:** Ingest 50,000 mixed logs; verify OCSF 4001 + dlq.log verified.
-### Phase 4: Control Plane (`feat/plane-3-control-plane`) - ✅ Complete `main@90e7963` + `feat/plane-3-control-plane@06cffaa`
-* **Target:** `prism-brain/` (Python) **DONE**
-* **Configuration:** CPU-only `device:cpu` `coder.enabled:false` `laya` optional 421M `llama-server Q4` `/home/legion/.local/bin/llama-server` `config.yaml` `PRISM_DEVICE`
-* **Experiment:** `docs/EXPERIMENT_L3_BIGDATA.md` 52k heter `Fortinet logid Cisco %ASA Palo CSV` `7 templates 0.57s` `Laya 32ms GPU/120ms CPU 0.766` `heuristic 17µs` `llama Q4 0.7s` `E2E 7265 EPS 627M/day`
-* **Note:** Decoupled 3 modules Drain→Laya→Coder, each best perf independently, per-device `device:cpu|gpu` `coder.enabled`
-* **Modules:**
-  1. `watcher`: `watchdog inotify` `last_position` `basename` dual path `/var/run/prism/dlq.jsonl` + `/tmp` `0% CPU`
-  2. `cluster`: `Drain3 TemplateMiner O(n) 100 ns hit 1-2M/sec` `drain.rs fixed depth` `10k 0.02s`
-  3. `triage`: `Laya System1 421M ModernBERT 512 ctx 32.8ms` `heuristic fallback 17µs` `Apache 2.0` `laya 0.3.16`
-  4. `coder`: `llama-server Q4_K_M 4.9GB AVX2 0.7s` heuristic `0s` `VRL parse_regex`
-  5. `hitl`: `Gatekeeper /etc/prism/rules fallback /tmp uuid sync_all`
-* **Testing Gate:** `test_drain_isolated 4/4 <1s` `test_triage 5 types` `test_laya 1 passed 2 skipped` `test_coder 2 passed 1 skipped` `test_watcher 3/3 51k EPS` `pytest 15 passed 3 skipped 12.44s` `cargo 13/13`
+### Phase 4: Control Plane (`feat/plane-3-control-plane`) - ✅ Complete
+* **Target:** `prism-brain/` (Python)
+* **Configuration:** AI Loop integrated with `Qwen2.5-Coder-3B-Instruct` via `llama-server`.
+* **Testing Gate:** AI successfully generates VRL in 2-4 seconds. Gatekeeper `--dry-run-vrl` sandbox catches hallucinations and rejects bad code.
 
-### Phase 5: Presentation & Observability (`feat/plane-5-presentation`) - ✅ Complete (849d79c)
+### Phase 5: Autonomous AI Loop & Hot-Reload (Iteration 4) - ✅ Complete
+* **Target:** `crates/prism-core/src/vrl.rs` & `demo_ai_loop.sh`
+* **Modules:** `notify` filesystem watcher + `RwLock` atomic pointer swap in Rust data plane.
+* **Testing Gate:** End-to-end demo script passes unknown logs to DLQ, AI triages and generates VRL, Gatekeeper dry-runs it, and Rust hot-reloads it in-memory without losing a single packet on the data plane.
 
-Sprint Phase 1-5 DONE 5/5.
+### Phase 6: Presentation & Observability (Iteration 5) - ⏳ PENDING NEXT
 * **Target:** `crates/prism-tui` & `docker-compose.yml`
 * **Modules:**
   1. `tui`: Ratatui 4-pane terminal engine room (Live EPS, DLQ rate, Merkle ticker, HitL approval).
   2. `siem`: Docker Compose setup with Elasticsearch & Kibana reading PRISM's OCSF output.
-* **Testing Gate:** Run full end-to-end pipeline with split-screen showing Ratatui TUI live stats and Kibana live threat maps simultaneously.
+* **Testing Gate:** Run full end-to-end pipeline with split-screen showing Ratatui TUI live stats.
+
+### Phase 7: Cryptographic Witness Nodes (Iteration 6) - ⏳ PENDING
+* **Target:** `crates/prism-provenance/src/witness.rs`
+* **Modules:** 2-of-3 ed25519 cosigning quorum for Merkle ledger blocks to achieve true immutability.
 
 ---
 
 ## 7. How to Resume in the New Chat
 
 Start the new chat with:
-> **"Read `HANDOFF_SESSION.md`. We are following strict bottom-to-top development on dedicated branches with no mocks. Checkout `feat/plane-1-ingestion` and let's begin Phase 1: Cargo Workspace setup and `prism-ingest` zero-copy UDP listener with real syslog test cases."**
+> **"Read `HANDOFF_SESSION.md`. The Ingestion, Data, Integrity, and Control planes are complete, including the AI Hot-Reloading loop (Iterations 1-4). We need to start Phase 6: The TUI Dashboard (Iteration 5). Please spin up a subagent to begin the TUI integration."**

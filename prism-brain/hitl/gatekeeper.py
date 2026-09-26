@@ -28,7 +28,7 @@ class Gatekeeper:
         if raw_log:
             import subprocess
             try:
-                prism_bin = os.path.join(os.path.dirname(__file__), "..", "..", "target", "debug", "prism")
+                prism_bin = os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "prism")
                 if not os.path.exists(prism_bin):
                     prism_bin = "prism"
                     

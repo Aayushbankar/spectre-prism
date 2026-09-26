@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import requests
+import re
 from typing import Optional
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -16,34 +17,55 @@ class VrlCoder:
     def __init__(self, config=None):
         self.config = config or load_config()
         coder_conf = self.config.get("coder", {})
-        self.host = coder_conf.get("host", "http://localhost:11434")
-        self.enabled = str(coder_conf.get("enabled", "false")).lower() == "true"
-        self.timeout = coder_conf.get("timeout", 2)
-        self.model = coder_conf.get("model", "llama3")
+        self.host = coder_conf.get("host", "http://127.0.0.1:8080")
+        self.enabled = str(coder_conf.get("enabled", "true")).lower() == "true"
+        self.timeout = coder_conf.get("timeout", 30)
+        self.model = coder_conf.get("model", "qwen")
 
     def generate_vrl(self, template: str, device_type: str) -> Optional[str]:
-        """Generate a VRL script for the given log template using Llama-3."""
+        """Generate a VRL script for the given log template using local Qwen2.5-Coder."""
         if not self.enabled:
             logger.info("Coder: heuristic VRL (CPU-only)")
             return self._heuristic_fallback(device_type)
-        prompt = f"Write a VRL script to parse this {device_type} log template: {template}. Extract 'ip' and map it to OCSF. Just return the VRL code."
-        try:
-            # Detect if using llama-server or ollama
-            endpoint = "/completion" if "8088" in self.host else "/api/generate"
-            payload = {"prompt": prompt, "n_predict": 128} if endpoint == "/completion" else {"model": self.model, "prompt": prompt, "stream": False}
             
+        system_prompt = (
+            "You are an expert in Vector Remap Language (VRL). "
+            "You write pure VRL code without markdown formatting or explanation. "
+            "Example VRL syntax for IP extraction:\n"
+            ".ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip"
+        )
+        prompt = f"Write a VRL script to parse this {device_type} log template: {template}. Extract 'ip' into '.ip'. Just return the raw VRL code."
+        
+        try:
+            payload = {
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            
+            logger.info(f"Coder: Requesting VRL generation from {self.host}...")
             resp = requests.post(
-                f"{self.host}{endpoint}",
+                f"{self.host}/v1/chat/completions",
                 json=payload,
                 timeout=self.timeout
             )
+            
             if resp.status_code == 200:
-                logger.info("Coder: LLM generated VRL")
                 data = resp.json()
-                return data.get("content", data.get("response", ""))
+                content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                
+                # Strip markdown code blocks
+                content = re.sub(r'```\w*\n?', '', content).strip()
 
-        except requests.exceptions.RequestException:
-            logger.warning("Coder: Ollama unreachable, fallback to heuristic (CPU-only)")
+                logger.info(f"Coder: LLM generated VRL successfully: \n{content}")
+                return content
+            else:
+                logger.warning(f"Coder: LLM failed with status {resp.status_code}, fallback to heuristic")
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Coder: LLM unreachable ({e}), fallback to heuristic (CPU-only)")
             pass
         
         return self._heuristic_fallback(device_type)
