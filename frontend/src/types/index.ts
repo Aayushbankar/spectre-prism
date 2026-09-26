@@ -1,4 +1,4 @@
-export type DashboardView = 'pipeline' | 'analytics' | 'tactical' | 'all';
+export type DashboardView = 'pipeline' | 'analytics' | 'tactical' | 'gatekeeper' | 'dlq' | 'vrl' | 'all';
 
 export type DashboardTheme = 'dark' | 'light' | 'cyber';
 

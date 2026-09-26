@@ -47,9 +47,21 @@ export const Header: React.FC<Props> = ({
       title: 'Tactical Cyber Command Center',
       subtitle: 'Design 3 (dashboard_1.jpeg) · Global Attack Vector Map & Section 65B Forensic Ledger',
     },
+    gatekeeper: {
+      title: 'Human-in-the-Loop (HitL) Gatekeeper',
+      subtitle: 'AI Rule Approvals · Drain3 Template Mining & ModernBERT Rule Hot-Reloading',
+    },
+    dlq: {
+      title: 'Dead Letter Queue (DLQ) Inspector',
+      subtitle: 'Quarantined Log Analysis · Root Cause Exception Triage & Reprocessing',
+    },
+    vrl: {
+      title: 'Interactive VRL Sandbox & Validator',
+      subtitle: 'Vector Remap Language · Live OCSF Schema Normalization & Proof Verification',
+    },
     all: {
       title: 'PRISM Unified Command Center',
-      subtitle: 'All 3 Adapted Architectures · Seamless End-to-End Log Parsing Observability',
+      subtitle: 'All 3 Adapted Architectures & Real Backend Telemetry Stream',
     },
   };
 

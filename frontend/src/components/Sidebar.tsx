@@ -3,7 +3,6 @@ import {
   Layers,
   LayoutDashboard,
   FileText,
-  Users,
   ShieldAlert,
   Sliders,
   HelpCircle,
@@ -12,7 +11,9 @@ import {
   Sun,
   Zap,
   Globe,
-  Radio,
+  Cpu,
+  AlertTriangle,
+  FileCode,
 } from 'lucide-react';
 import type { DashboardView, DashboardTheme } from '../types';
 
@@ -31,6 +32,9 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
     { id: 'pipeline' as DashboardView, label: 'Ingest Flow', icon: Zap, badge: 'D1' },
     { id: 'analytics' as DashboardView, label: 'Analytics', icon: LayoutDashboard, badge: 'D2' },
     { id: 'tactical' as DashboardView, label: 'Tactical Map', icon: Globe, badge: 'D3' },
+    { id: 'gatekeeper' as DashboardView, label: 'HitL Gatekeeper', icon: Cpu, badge: 'AI' },
+    { id: 'dlq' as DashboardView, label: 'DLQ Inspector', icon: AlertTriangle, badge: 'ERR' },
+    { id: 'vrl' as DashboardView, label: 'VRL Sandbox', icon: FileCode, badge: 'TEST' },
     { id: 'all' as DashboardView, label: 'Unified View', icon: Layers, badge: 'ALL' },
   ];
 
@@ -64,7 +68,7 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
         {/* Main Navigation */}
         <nav className="space-y-1.5">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-2">
-            Dashboards
+            Operations & Control
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -73,7 +77,7 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
                   isActive
                     ? isCyber
                       ? 'bg-amber-500 text-black font-bold shadow-[0_0_12px_#f59e0b]'
@@ -83,7 +87,7 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon className="w-4 h-4" />
                   <span>{item.label}</span>
                 </div>
@@ -103,76 +107,59 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
           })}
         </nav>
 
-        {/* Additional SIEM & SIH planes */}
-        <div className="space-y-1.5 pt-3 border-t border-slate-800/60">
+        {/* Security & Vault Compliance Links */}
+        <div className="space-y-1 pt-3 border-t border-slate-800/60">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 mb-2">
-            Planes & Security
+            Evidence Vault
           </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 rounded-lg hover:bg-slate-800/40 cursor-pointer">
-            <span className="flex items-center gap-2.5">
-              <FileText className="w-4 h-4 text-emerald-400" /> Sec 65B Parquet Vault
+          <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400 rounded-lg">
+            <span className="flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5 text-emerald-400" /> Sec 65B Parquet
             </span>
             <span className="w-2 h-2 rounded-full bg-emerald-400" />
           </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 rounded-lg hover:bg-slate-800/40 cursor-pointer">
-            <span className="flex items-center gap-2.5">
-              <ShieldAlert className="w-4 h-4 text-amber-400" /> HitL AI Gatekeeper
+          <div className="flex items-center justify-between px-3 py-1.5 text-xs text-slate-400 rounded-lg">
+            <span className="flex items-center gap-2">
+              <Sliders className="w-3.5 h-3.5 text-cyan-400" /> VRL Hot Reloading
             </span>
-            <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-400">
-              2
-            </span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2 text-xs text-slate-400 rounded-lg hover:bg-slate-800/40 cursor-pointer">
-            <span className="flex items-center gap-2.5">
-              <Sliders className="w-4 h-4 text-cyan-400" /> VRL Hot Reloading
-            </span>
-            <span className="text-[10px] text-slate-500">v1.9</span>
+            <span className="text-[10px] text-slate-500 font-mono">ACTIVE</span>
           </div>
         </div>
       </div>
 
-      {/* Bottom Area: Help, Theme Switcher (matches dashboard2.jpeg) */}
-      <div className="space-y-4 pt-4 border-t border-slate-800/60">
-        <div className="space-y-1">
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-white rounded-lg transition">
-            <HelpCircle className="w-4 h-4" /> Help Center
-          </button>
-          <button className="w-full flex items-center gap-3 px-3 py-2 text-xs text-slate-400 hover:text-rose-400 rounded-lg transition">
-            <LogOut className="w-4 h-4" /> Log out
-          </button>
-        </div>
-
-        {/* 3-way Theme Selector: Dark, Light, Cyber Gold */}
-        <div className="p-1.5 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between text-xs">
+      {/* Bottom Area: Theme Switcher */}
+      <div className="space-y-3 pt-3 border-t border-slate-800/60">
+        {/* 3-way Theme Selector */}
+        <div className="p-1 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between text-xs">
           <button
             onClick={() => onThemeChange('dark')}
-            className={`flex-1 py-1 px-1.5 rounded-lg flex items-center justify-center gap-1 transition ${
+            className={`flex-1 py-1 px-1 rounded-lg flex items-center justify-center gap-1 transition ${
               theme === 'dark' ? 'bg-slate-800 text-cyan-400 font-bold shadow' : 'text-slate-400 hover:text-white'
             }`}
-            title="Dark Theme (Design 2 & 1)"
+            title="Dark Theme"
           >
-            <Moon className="w-3.5 h-3.5" />
-            <span className="text-[10px]">Dark</span>
+            <Moon className="w-3 h-3" />
+            <span className="text-[9px]">Dark</span>
           </button>
           <button
             onClick={() => onThemeChange('light')}
-            className={`flex-1 py-1 px-1.5 rounded-lg flex items-center justify-center gap-1 transition ${
+            className={`flex-1 py-1 px-1 rounded-lg flex items-center justify-center gap-1 transition ${
               theme === 'light' ? 'bg-white text-slate-900 font-bold shadow' : 'text-slate-400 hover:text-white'
             }`}
-            title="Light Theme (Design 2)"
+            title="Light Theme"
           >
-            <Sun className="w-3.5 h-3.5" />
-            <span className="text-[10px]">Light</span>
+            <Sun className="w-3 h-3" />
+            <span className="text-[9px]">Light</span>
           </button>
           <button
             onClick={() => onThemeChange('cyber')}
-            className={`flex-1 py-1 px-1.5 rounded-lg flex items-center justify-center gap-1 transition ${
+            className={`flex-1 py-1 px-1 rounded-lg flex items-center justify-center gap-1 transition ${
               theme === 'cyber' ? 'bg-amber-500 text-black font-bold shadow' : 'text-slate-400 hover:text-white'
             }`}
-            title="Tactical Cyber Theme (Design 3)"
+            title="Tactical Cyber Theme"
           >
-            <Zap className="w-3.5 h-3.5" />
-            <span className="text-[10px]">Cyber</span>
+            <Zap className="w-3 h-3" />
+            <span className="text-[9px]">Cyber</span>
           </button>
         </div>
       </div>

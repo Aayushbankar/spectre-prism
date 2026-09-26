@@ -5,25 +5,30 @@ import { Header } from './components/Header';
 import { FlowPipelineView } from './components/FlowPipelineView';
 import { ExecutiveAnalyticsView } from './components/ExecutiveAnalyticsView';
 import { TacticalCommandView } from './components/TacticalCommandView';
+import { LiveBackendBridge } from './components/LiveBackendBridge';
+import { GatekeeperHITLView } from './components/GatekeeperHITLView';
+import { DLQInspectorView } from './components/DLQInspectorView';
+import { VRLPlaygroundView } from './components/VRLPlaygroundView';
 
 export function App() {
   const [currentView, setCurrentView] = useState<DashboardView>('all');
   const [theme, setTheme] = useState<DashboardTheme>('dark');
   const [isLiveStreaming, setIsLiveStreaming] = useState<boolean>(true);
-  const [streamTick, setStreamTick] = useState<number>(0);
+  const [vrlInitialPayload, setVrlInitialPayload] = useState<string | undefined>(undefined);
+  const [vrlInitialRule, setVrlInitialRule] = useState<string | undefined>(undefined);
 
-  // Background simulation ticker for live EPS & events
-  useEffect(() => {
-    if (!isLiveStreaming) return;
-    const interval = setInterval(() => {
-      setStreamTick((prev) => prev + 1);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isLiveStreaming]);
+  const handleSendToVrl = (payload: string) => {
+    setVrlInitialPayload(payload);
+    setCurrentView('vrl');
+  };
+
+  const handleTestRuleInVrl = (ruleCode: string) => {
+    setVrlInitialRule(ruleCode);
+    setCurrentView('vrl');
+  };
 
   const isCyber = theme === 'cyber';
   const isLight = theme === 'light';
-  const isDark = theme === 'dark';
 
   return (
     <div
@@ -35,7 +40,7 @@ export function App() {
           : 'bg-[#0f111a] text-slate-100 font-sans'
       }`}
     >
-      {/* Left Sidebar */}
+      {/* Left Sidebar Navigation */}
       <Sidebar
         currentView={currentView}
         onViewChange={setCurrentView}
@@ -54,59 +59,84 @@ export function App() {
         />
 
         <main className="flex-1 p-6 space-y-8 max-w-[1600px] w-full mx-auto">
-          {/* View Switch Rendering */}
+          {/* Always Visible: Real PRISM Backend Telemetry & Ingest Controller */}
+          <LiveBackendBridge theme={theme} />
+
+          {/* View 1: Ingest & Traffic Flow (Design 1) */}
           {currentView === 'pipeline' && (
             <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
+          {/* View 2: Executive Analytics & Operations (Design 2) */}
           {currentView === 'analytics' && (
             <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
+          {/* View 3: Tactical Cyber Command & Threat Map (Design 3) */}
           {currentView === 'tactical' && (
             <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
+          {/* View 4: Human-in-the-Loop (HitL) Gatekeeper */}
+          {currentView === 'gatekeeper' && (
+            <GatekeeperHITLView theme={theme} onTestRule={handleTestRuleInVrl} />
+          )}
+
+          {/* View 5: Dead Letter Queue (DLQ) Inspector */}
+          {currentView === 'dlq' && (
+            <DLQInspectorView theme={theme} onSendToVrl={handleSendToVrl} />
+          )}
+
+          {/* View 6: Interactive VRL Sandbox & Validator */}
+          {currentView === 'vrl' && (
+            <VRLPlaygroundView
+              theme={theme}
+              initialPayload={vrlInitialPayload}
+              initialRule={vrlInitialRule}
+            />
+          )}
+
+          {/* View 7: Unified View (All 3 Reference Designs Combined) */}
           {currentView === 'all' && (
             <div className="space-y-12">
-              {/* Design 1 Section */}
+              {/* Section 1: Ingest Flow (ideainso3.jpeg) */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                      DESIGN 1
+                      DESIGN 1 · ideainso3.jpeg
                     </span>
                     <h2 className="text-lg font-bold">Traffic Flow & Pipeline Overview</h2>
                   </div>
-                  <span className="text-xs text-slate-500">Adapted from ideainso3.jpeg</span>
+                  <span className="text-xs text-slate-500 font-mono">Zero-Alloc UDP Buffer → OCSF Egress</span>
                 </div>
                 <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>
 
-              {/* Design 2 Section */}
+              {/* Section 2: Executive Analytics (dashboard2.jpeg) */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                      DESIGN 2
+                      DESIGN 2 · dashboard2.jpeg
                     </span>
                     <h2 className="text-lg font-bold">Executive Analytics & Real-Time Telemetry</h2>
                   </div>
-                  <span className="text-xs text-slate-500">Adapted from dashboard2.jpeg</span>
+                  <span className="text-xs text-slate-500 font-mono">Multi-Theme • Live Spline EPS</span>
                 </div>
                 <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>
 
-              {/* Design 3 Section */}
+              {/* Section 3: Tactical Cyber Command (dashboard_1.jpeg) */}
               <section className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                   <div className="flex items-center gap-2">
                     <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      DESIGN 3
+                      DESIGN 3 · dashboard_1.jpeg
                     </span>
                     <h2 className="text-lg font-bold">Tactical Cyber Command & Threat Intelligence</h2>
                   </div>
-                  <span className="text-xs text-slate-500">Adapted from dashboard_1.jpeg</span>
+                  <span className="text-xs text-slate-500 font-mono">Global Map • Section 65B History</span>
                 </div>
                 <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>
