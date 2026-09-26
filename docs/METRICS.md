@@ -6,7 +6,39 @@
 
 ---
 
-## 0. Combined Workspace (All Planes)
+## 0. Real Operational Metrics (from `verify_e2e_pipeline.py` and Test Harnesses)
+
+| Metric | Value | Proof |
+|--------|-------|-------|
+| UDP Ingest EPS | 13,290 | `metrics.json` / `verify_e2e_pipeline.py` |
+| File Ingest EPS | 13,290 | `metrics.json` / `verify_e2e_pipeline.py` |
+| UDP Lossless Ceiling | 8,000 EPS | `metrics.json` / benchmark ledger |
+| Coverage (Perimeter) | 99.8967% | `data/real_corpora` evaluation corpus |
+| Byte Accounting Closure | >95% | `cargo test accounting` |
+| Field Accuracy | >90% | `cargo test scorer` |
+| Merkle Proof Verification | PASS | `cargo test merkle` |
+| Witness Verification | PASS | `cargo test witness` |
+| DLQ Re-parse Success | 100% | `verify_e2e_pipeline.py` output |
+
+### Proof Commands
+```bash
+# Run and capture end-to-end pipeline metrics
+python3 verify_e2e_pipeline.py 2>&1 | tee metrics_run.log
+cat metrics.json | jq .
+
+# Verify byte accounting closure (>95%)
+cargo test -p prism-core accounting -- --nocapture
+
+# Verify RFC 6962 Merkle proof generation and verification
+cargo test -p prism-merkle merkle -- --nocapture
+
+# Verify Section 65B Witness 2-of-3 Ed25519 cosigning
+cargo test -p prism-provenance witness -- --nocapture
+```
+
+---
+
+## 0.1 Combined Workspace (All Planes)
 
 | Scope | Tests | Result | Wall Time | Commit | Citation |
 |---|---|---|---|---|---|

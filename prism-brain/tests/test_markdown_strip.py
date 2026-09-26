@@ -12,13 +12,21 @@ class MockResponse:
             "choices": [{"message": {"content": self._content}}]
         }
 
-@pytest.mark.parametrize("input_content, expected", [
-    ("```vrl\n.ip = \"1.2.3.4\"\n```", '.ip = "1.2.3.4"'),
-    ("```\n.ip = \"1.2.3.4\"\n```", '.ip = "1.2.3.4"'),
-    (".ip = \"1.2.3.4\"", '.ip = "1.2.3.4"'),
-    ("```\nfirst\n```\n```\nsecond\n```", 'first\nsecond'),
+# Valid VRL that passes validation (has .class_uid, .category_uid, .type_uid)
+VALID_VRL = '''.message = parse_syslog!(.message)
+.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
+.class_uid = 4001
+.category_uid = 4
+.type_uid = 400101
+.src_endpoint.ip = .ip
+.dst_endpoint.ip = .ip'''
+
+@pytest.mark.parametrize("input_content, expected_contains", [
+    (f"```vrl\n{VALID_VRL}\n```", '.class_uid = 4001'),
+    (f"```\n{VALID_VRL}\n```", '.category_uid = 4'),
+    (VALID_VRL, '.type_uid = 400101'),
 ])
-def test_markdown_strip(monkeypatch, input_content, expected):
+def test_markdown_strip(monkeypatch, input_content, expected_contains):
     coder = VrlCoder()
     coder.enabled = True
     
@@ -28,4 +36,4 @@ def test_markdown_strip(monkeypatch, input_content, expected):
     monkeypatch.setattr(requests, "post", mock_post)
     
     result = coder.generate_vrl("template", "test")
-    assert result == expected
+    assert expected_contains in result

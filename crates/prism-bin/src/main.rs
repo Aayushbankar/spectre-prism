@@ -18,6 +18,8 @@ use prism_core::sink::HttpSink;
 
 use prism_provenance::vault::VaultWriter;
 use prism_provenance::merkle::ProvenanceTree;
+
+use prism_common::OcsfEvent;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
@@ -36,6 +38,9 @@ struct Args {
 
     #[arg(short = 'v', long, default_value = "/tmp/prism/vault")]
     vault_dir: String,
+
+    #[arg(short = 'r', long, default_value = "/tmp/prism/rules")]
+    rules_dir: PathBuf,
 
     #[arg(short, long, default_value_t = 1000)]
     batch_size: usize,
@@ -104,9 +109,6 @@ async fn main() -> anyhow::Result<()> {
     let fortinet_count = Arc::new(AtomicUsize::new(0));
     let cisco_count = Arc::new(AtomicUsize::new(0));
     let paloalto_count = Arc::new(AtomicUsize::new(0));
-    
-    let processed_clone = processed_events.clone();
-    let dlq_clone = dlq_count.clone();
 
     for i in 0..8 {
         let sender_clone = sender.clone();
@@ -175,6 +177,8 @@ async fn main() -> anyhow::Result<()> {
         }
     });
 
+    let shared_vrl_engine = Arc::new(VrlEngine::new(Some(&args.rules_dir)).expect("Failed to initialize VRL Engine"));
+
     // 3. Data plane task (Parallelized)
     let num_workers = 16;
     for _ in 0..num_workers {
@@ -187,67 +191,114 @@ async fn main() -> anyhow::Result<()> {
         let cisco_clone = cisco_count.clone();
         let paloalto_clone = paloalto_count.clone();
         let batch_size = args.batch_size;
+        let vrl_engine = shared_vrl_engine.clone();
 
         tokio::spawn(async move {
             let _router = HeuristicRouter::new();
-            let vrl_engine = VrlEngine::new(None).expect("Failed to initialize VRL Engine");
             let dlq_path = format!("{}/dlq_{}.log", vault_dir_data, uuid::Uuid::new_v4());
             let mut dlq = DeadLetterQueue::new(Some(&dlq_path)).unwrap();
             
             let sink = es_endpoint.map(|ep| HttpSink::new(&ep));
-            let mut batch = Vec::new();
+            let mut batch: Vec<OcsfEvent> = Vec::new();
             
             while let Ok(event) = data_rx.recv_async().await {
                 let payload = &event.payload;
-            let payload_str = std::str::from_utf8(payload).unwrap_or("");
-            
-            let vendor = HeuristicRouter::route(payload);
-            
-            match vendor {
-                Vendor::Fortinet => { fortinet_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::CiscoAsa => { cisco_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::PaloAlto => { paloalto_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::Unknown => {
-                    let _ = dlq.push(&event, "Unknown Vendor");
-                    dlq_clone.fetch_add(1, Ordering::SeqCst);
-                    continue;
+                let payload_str = std::str::from_utf8(payload).unwrap_or("");
+                
+                let vendor = HeuristicRouter::route(payload);
+                
+                match vendor {
+                    Vendor::Fortinet => { fortinet_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::CiscoAsa => { cisco_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::PaloAlto => { paloalto_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::Unknown => {}
                 }
+                
+                let parsed = match vrl_engine.process(&vendor, payload_str) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let _ = dlq.push(&event, &format!("Routing/VRL Error: {}", e));
+                        dlq_clone.fetch_add(1, Ordering::SeqCst);
+                        continue;
+                    }
+                };
+                
+                let hash_hex = event.metadata.hash.to_hex();
+                let timestamp_ms = event.metadata.timestamp.timestamp_millis();
+                let ocsf = OcsfMapper::map(parsed, &hash_hex, timestamp_ms);
+                
+                batch.push(ocsf);
+                
+                if batch.len() >= batch_size {
+                    if let Some(ref s) = sink {
+                        let _ = s.push_bulk(&batch).await;
+                    } else {
+                        for _item in &batch {
+                        }
+                    }
+                    batch.clear();
+                }
+                
+                processed_clone.fetch_add(1, Ordering::SeqCst);
             }
-            
-            let parsed = match vrl_engine.process(&vendor, payload_str) {
-                Ok(v) => v,
-                Err(e) => {
-                    let _ = dlq.push(&event, &format!("VRL Error: {}", e));
-                    dlq_clone.fetch_add(1, Ordering::SeqCst);
-                    continue;
-                }
-            };
-            
-            let hash_hex = event.metadata.hash.to_hex();
-            let timestamp_ms = event.metadata.timestamp.timestamp_millis();
-            let ocsf = OcsfMapper::map(parsed, &hash_hex, timestamp_ms);
-            
-            batch.push(ocsf);
-            
-            if batch.len() >= batch_size {
-                if let Some(ref s) = sink {
-                    let _ = s.push_bulk(&batch).await;
-                } else {
-                    for item in &batch {
-                        // In perf tests, skip JSON serialization to stdout, just drop it.
-                        // let json = serde_json::to_string(item).unwrap();
-                        // println!("{}", json);
+        });
+    }
+
+    // 4. DLQ Re-parser background task (re-parses DLQ entries when dynamic rules are approved)
+    let vault_dir_reparse = args.vault_dir.clone();
+    let processed_reparse = processed_events.clone();
+    let dlq_reparse = dlq_count.clone();
+    let es_endpoint_reparse = args.es_endpoint.clone();
+    let vrl_engine = shared_vrl_engine.clone();
+    tokio::spawn(async move {
+        let sink = es_endpoint_reparse.map(|ep| HttpSink::new(&ep));
+        let mut interval = time::interval(Duration::from_secs(2));
+        let mut reprocessed_entries = std::collections::HashSet::new();
+
+        loop {
+            interval.tick().await;
+            if let Ok(entries) = std::fs::read_dir(&vault_dir_reparse) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().and_then(|s| s.to_str()) == Some("log") 
+                        && path.file_stem().and_then(|s| s.to_str()).map(|s| s.starts_with("dlq_")).unwrap_or(false) 
+                    {
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            for line in content.lines() {
+                                if line.trim().is_empty() { continue; }
+                                let entry_hash = blake3::hash(line.as_bytes()).to_hex().to_string();
+                                if reprocessed_entries.contains(&entry_hash) {
+                                    continue;
+                                }
+                                let payload = if let Some(idx) = line.find("PAYLOAD=") {
+                                    &line[idx + 8..]
+                                } else {
+                                    line
+                                };
+                                if let Ok(parsed) = vrl_engine.process(&Vendor::Unknown, payload) {
+                                    let hash_hex = blake3::hash(payload.as_bytes()).to_hex().to_string();
+                                    let timestamp_ms = chrono::Utc::now().timestamp_millis();
+                                    let ocsf = OcsfMapper::map(parsed, &hash_hex, timestamp_ms);
+                                    if let Some(ref s) = sink {
+                                        let _ = s.push_bulk(std::slice::from_ref(&ocsf)).await;
+                                    }
+                                    reprocessed_entries.insert(entry_hash);
+                                    processed_reparse.fetch_add(1, Ordering::SeqCst);
+                                    let cur_dlq = dlq_reparse.load(Ordering::Relaxed);
+                                    if cur_dlq > 0 {
+                                        dlq_reparse.fetch_sub(1, Ordering::Relaxed);
+                                    }
+                                    println!("[REPARSE] Successfully re-parsed DLQ entry into OCSF class_uid={}", ocsf.class_uid());
+                                }
+                            }
+                        }
                     }
                 }
-                batch.clear();
             }
-            
-            processed_clone.fetch_add(1, Ordering::SeqCst);
         }
     });
-    }
     // Stats printer
-    let mut interval = time::interval(Duration::from_secs(5));
+    let mut interval = time::interval(Duration::from_secs(1));
     let mut last_processed = 0;
     
     // Ctrl-C handler
@@ -260,7 +311,7 @@ async fn main() -> anyhow::Result<()> {
                 let current_dlq = dlq_count.load(Ordering::Relaxed);
                 let drops = drop_count.load(Ordering::Relaxed);
                 
-                let eps = (current_processed - last_processed) / 5;
+                let eps = current_processed.saturating_sub(last_processed);
                 last_processed = current_processed;
                 
                 let f_cnt = fortinet_count.load(Ordering::Relaxed);

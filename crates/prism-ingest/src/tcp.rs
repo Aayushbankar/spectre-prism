@@ -59,7 +59,7 @@ impl TcpIngest {
                             let event = RawEvent {
                                 payload: payload_bytes,
                                 metadata: ProvenanceMeta {
-                                    hash: hash.into(),
+                                    hash,
                                     timestamp,
                                     source,
                                 },

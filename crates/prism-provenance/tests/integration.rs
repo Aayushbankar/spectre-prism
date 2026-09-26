@@ -1,4 +1,3 @@
-use flume;
 use prism_common::{RawEvent, ProvenanceMeta, LogSource};
 use prism_provenance::ticker::IntegrityTicker;
 use prism_provenance::audit::audit_vault_file;
