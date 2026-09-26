@@ -1,5 +1,6 @@
 use prism_core::{HeuristicRouter, VrlEngine, ocsf::OcsfMapper};
 use prism_core::accounting::{account_fortinet, account_cisco};
+use prism_common::OcsfEvent;
 use std::fs;
 use std::path::PathBuf;
 
@@ -56,6 +57,13 @@ fn setup_test_rules(dir: &std::path::Path) {
     fs::write(dir.join("palo.vrl"), palo).unwrap();
 }
 
+fn get_network_activity(ocsf: &OcsfEvent) -> Option<&prism_common::OcsfNetworkActivity> {
+    match ocsf {
+        OcsfEvent::NetworkActivity(na) => Some(na),
+        _ => None,
+    }
+}
+
 #[tokio::test]
 async fn test_real_data_samples() {
     let samples = vec![
@@ -77,8 +85,9 @@ async fn test_real_data_samples() {
             
             if let Ok(parsed) = vrl.process(&vendor, line) {
                 let ocsf = OcsfMapper::map(parsed, "test_hash", 0);
-                assert_ne!(ocsf.src_endpoint.ip, "0.0.0.0");
-                assert_ne!(ocsf.src_endpoint.port, 0);
+                let network_activity = get_network_activity(&ocsf).expect("Expected NetworkActivity");
+                assert_ne!(network_activity.src_endpoint.ip, "0.0.0.0");
+                assert_ne!(network_activity.src_endpoint.port, 0);
             }
             
             if sample == "fortinet_fortigate.log" {

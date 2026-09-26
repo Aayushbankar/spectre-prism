@@ -5,7 +5,7 @@ use prism_core::{
     dlq::DeadLetterQueue,
     sink::HttpSink,
 };
-use prism_common::{RawEvent, ProvenanceMeta, LogSource, OcsfNetworkActivity, Endpoint, VaultMetadata};
+use prism_common::{RawEvent, ProvenanceMeta, LogSource, OcsfEvent, Endpoint, VaultMetadata};
 use bytes::Bytes;
 use chrono::Utc;
 use std::fs;
@@ -55,6 +55,13 @@ fn setup_test_rules(dir: &std::path::Path) {
     fs::write(dir.join("palo.vrl"), palo).unwrap();
 }
 
+fn get_network_activity(ocsf: &OcsfEvent) -> Option<&prism_common::OcsfNetworkActivity> {
+    match ocsf {
+        OcsfEvent::NetworkActivity(na) => Some(na),
+        _ => None,
+    }
+}
+
 #[tokio::test]
 async fn test_data_plane_routing() {
     let _ = std::process::Command::new("docker")
@@ -101,25 +108,27 @@ async fn test_data_plane_routing() {
         let parsed = vrl.process(&vendor, payload_str).unwrap();
         let ocsf = OcsfMapper::map(parsed, &hash.to_hex(), Utc::now().timestamp_millis());
         
-        assert_eq!(ocsf.class_uid, 4001, "Failed for i={}", i);
-        assert_eq!(ocsf.metadata.version, "1.9.0", "Failed for i={}", i);
-        assert_eq!(ocsf.metadata.provenance_hash, hash.to_hex().as_str(), "Failed for i={}", i);
-        assert_eq!(ocsf.src_endpoint.ip, "192.168.1.5", "Failed for i={}, payload={}, ocsf={:?}", i, payload_str, ocsf);
+        let network_activity = get_network_activity(&ocsf).expect("Expected NetworkActivity");
+        
+        assert_eq!(ocsf.class_uid(), 4001, "Failed for i={}", i);
+        assert_eq!(network_activity.base.metadata.version, "1.9.0", "Failed for i={}", i);
+        assert_eq!(network_activity.base.metadata.provenance_hash, hash.to_hex().as_str(), "Failed for i={}", i);
+        assert_eq!(network_activity.src_endpoint.ip, "192.168.1.5", "Failed for i={}, payload={}, ocsf={:?}", i, payload_str, ocsf);
         
         match i % 3 {
             0 => {
-                assert_eq!(ocsf.dst_endpoint.ip, "8.8.8.8");
-                assert_eq!(ocsf.severity_id, 2);
-                assert_eq!(ocsf.activity_id, 1);
+                assert_eq!(network_activity.dst_endpoint.ip, "8.8.8.8");
+                assert_eq!(network_activity.base.severity_id, 2);
+                assert_eq!(network_activity.base.activity_id, 1);
             }
             1 => {
-                assert_eq!(ocsf.dst_endpoint.ip, "10.0.0.1");
-                assert_eq!(ocsf.src_endpoint.port, 54321);
-                assert_eq!(ocsf.dst_endpoint.port, 80);
-                assert_eq!(ocsf.severity_id, 1);
+                assert_eq!(network_activity.dst_endpoint.ip, "10.0.0.1");
+                assert_eq!(network_activity.src_endpoint.port, 54321);
+                assert_eq!(network_activity.dst_endpoint.port, 80);
+                assert_eq!(network_activity.base.severity_id, 1);
             }
             _ => {
-                assert_eq!(ocsf.severity_id, 1);
+                assert_eq!(network_activity.base.severity_id, 1);
             }
         }
         
@@ -172,28 +181,30 @@ async fn test_sink_http_mock() {
 
     let url = server.url_str("/bulk");
     let sink = HttpSink::new(&url);
-    let batch = vec![OcsfNetworkActivity {
-        activity_id: 1,
-        category_uid: 4,
-        class_uid: 4001,
-        severity_id: 1,
-        severity: "Informational".to_string(),
-        status_id: 1,
-        confidence: 100,
-        type_uid: 400101,
-        time: 123456,
+    let batch = vec![OcsfEvent::NetworkActivity(prism_common::OcsfNetworkActivity {
+        base: prism_common::OcsfBaseEvent {
+            activity_id: 1,
+            category_uid: 4,
+            class_uid: 4001,
+            severity_id: 1,
+            severity: "Informational".to_string(),
+            status_id: 1,
+            confidence: 100,
+            type_uid: 400101,
+            time: 123456,
+            metadata: VaultMetadata {
+                version: "1.9.0".to_string(),
+                vault_uri: "local".to_string(),
+                provenance_hash: "hash".to_string(),
+            },
+            unmapped: None,
+        },
         src_endpoint: Endpoint { ip: "1.1.1.1".to_string(), port: 0 },
         dst_endpoint: Endpoint { ip: "2.2.2.2".to_string(), port: 0 },
         observables: vec![],
         raw_data: None,
-        metadata: VaultMetadata {
-            version: "1.9.0".to_string(),
-            vault_uri: "local".to_string(),
-            provenance_hash: "hash".to_string(),
-        },
-        unmapped: None,
         network: None,
-    }];
+    })];
 
     let res = sink.push_bulk(&batch).await;
     assert!(res.is_ok());

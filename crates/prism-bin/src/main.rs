@@ -18,6 +18,8 @@ use prism_core::sink::HttpSink;
 
 use prism_provenance::vault::VaultWriter;
 use prism_provenance::merkle::ProvenanceTree;
+
+use prism_common::OcsfEvent;
 use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::PathBuf;
@@ -195,56 +197,53 @@ async fn main() -> anyhow::Result<()> {
             let mut dlq = DeadLetterQueue::new(Some(&dlq_path)).unwrap();
             
             let sink = es_endpoint.map(|ep| HttpSink::new(&ep));
-            let mut batch = Vec::new();
+            let mut batch: Vec<OcsfEvent> = Vec::new();
             
             while let Ok(event) = data_rx.recv_async().await {
                 let payload = &event.payload;
-            let payload_str = std::str::from_utf8(payload).unwrap_or("");
-            
-            let vendor = HeuristicRouter::route(payload);
-            
-            match vendor {
-                Vendor::Fortinet => { fortinet_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::CiscoAsa => { cisco_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::PaloAlto => { paloalto_clone.fetch_add(1, Ordering::Relaxed); }
-                Vendor::Unknown => {
-                    let _ = dlq.push(&event, "Unknown Vendor");
-                    dlq_clone.fetch_add(1, Ordering::SeqCst);
-                    continue;
-                }
-            }
-            
-            let parsed = match vrl_engine.process(&vendor, payload_str) {
-                Ok(v) => v,
-                Err(e) => {
-                    let _ = dlq.push(&event, &format!("VRL Error: {}", e));
-                    dlq_clone.fetch_add(1, Ordering::SeqCst);
-                    continue;
-                }
-            };
-            
-            let hash_hex = event.metadata.hash.to_hex();
-            let timestamp_ms = event.metadata.timestamp.timestamp_millis();
-            let ocsf = OcsfMapper::map(parsed, &hash_hex, timestamp_ms);
-            
-            batch.push(ocsf);
-            
-            if batch.len() >= batch_size {
-                if let Some(ref s) = sink {
-                    let _ = s.push_bulk(&batch).await;
-                } else {
-                    for item in &batch {
-                        // In perf tests, skip JSON serialization to stdout, just drop it.
-                        // let json = serde_json::to_string(item).unwrap();
-                        // println!("{}", json);
+                let payload_str = std::str::from_utf8(payload).unwrap_or("");
+                
+                let vendor = HeuristicRouter::route(payload);
+                
+                match vendor {
+                    Vendor::Fortinet => { fortinet_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::CiscoAsa => { cisco_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::PaloAlto => { paloalto_clone.fetch_add(1, Ordering::Relaxed); }
+                    Vendor::Unknown => {
+                        let _ = dlq.push(&event, "Unknown Vendor");
+                        dlq_clone.fetch_add(1, Ordering::SeqCst);
+                        continue;
                     }
                 }
-                batch.clear();
+                
+                let parsed = match vrl_engine.process(&vendor, payload_str) {
+                    Ok(v) => v,
+                    Err(e) => {
+                        let _ = dlq.push(&event, &format!("VRL Error: {}", e));
+                        dlq_clone.fetch_add(1, Ordering::SeqCst);
+                        continue;
+                    }
+                };
+                
+                let hash_hex = event.metadata.hash.to_hex();
+                let timestamp_ms = event.metadata.timestamp.timestamp_millis();
+                let ocsf = OcsfMapper::map(parsed, &hash_hex, timestamp_ms);
+                
+                batch.push(ocsf);
+                
+                if batch.len() >= batch_size {
+                    if let Some(ref s) = sink {
+                        let _ = s.push_bulk(&batch).await;
+                    } else {
+                        for item in &batch {
+                        }
+                    }
+                    batch.clear();
+                }
+                
+                processed_clone.fetch_add(1, Ordering::SeqCst);
             }
-            
-            processed_clone.fetch_add(1, Ordering::SeqCst);
-        }
-    });
+        });
     }
     // Stats printer
     let mut interval = time::interval(Duration::from_secs(5));

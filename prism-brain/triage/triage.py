@@ -50,4 +50,5 @@ class TriageEngine:
         if "sql" in template_lower or "db" in template_lower:
             return "Database"
         
-        return "Unknown"
+        # Default to Firewall for unknown logs (most common in SIEM)
+        return "Firewall"

@@ -1,20 +1,34 @@
-use color_eyre::Result;
-use crossterm::event::{self, Event as CrosstermEvent, KeyCode, KeyEvent, KeyEventKind};
+use color_eyre::{Result as EyreResult, eyre::anyhow as eyre_anyhow};
+use crossterm::event::{Event as CrosstermEvent, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
     layout::{Constraint, Direction, Layout, Rect, Alignment},
-    widgets::{Block, Borders, BorderType, Sparkline, Gauge, Paragraph, Table, Row, Cell, List, ListItem, ListState, TableState, Chart, Dataset, GraphType, Axis, Tabs},
+    widgets::{Block, Borders, BorderType, Gauge, Paragraph, Table, Row, Cell, List, ListItem, ListState, TableState, Chart, Dataset, GraphType, Axis, Tabs},
     style::{Color, Style, Modifier},
     text::{Span, Line},
     symbols,
     Frame,
 };
-use serde::Deserialize;
-use std::collections::VecDeque;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tokio::sync::mpsc;
 use std::path::PathBuf;
+use std::fs;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuleMetadata {
+    pub rule_id: String,
+    pub device_type: String,
+    pub vendor_name: String,
+    pub signature: String,
+    pub state: String,
+    pub created_at: f64,
+    pub updated_at: f64,
+    pub vrl_path: String,
+    pub yaml_path: String,
+    pub raw_log_sample: String,
+    pub dry_run_result: Option<String>,
+    pub error: Option<String>,
+}
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -24,9 +38,10 @@ pub enum Action {
     Resize(u16, u16),
     UpdateMetrics(MetricsData),
     UpdateDlq(Vec<(String, String, String)>),
-    UpdateHitl(Vec<String>),
+    UpdateHitl(Vec<RuleMetadata>),
     UpdateLedger(String, f64, u64),
     ApproveRule(String),
+    RejectRule(String),
     Quit,
 }
 
@@ -62,9 +77,9 @@ pub struct App {
     
     // Data state
     pub metrics: MetricsData,
-    pub eps_history: Vec<(f64, f64)>, // Format for Chart
+    pub eps_history: Vec<(f64, f64)>,
     pub dlq_items: Vec<(String, String, String)>,
-    pub hitl_rules: Vec<String>,
+    pub hitl_rules: Vec<RuleMetadata>,
     pub ledger_tail: String,
     pub ledger_history: Vec<(f64, f64)>,
     pub tick_count: f64,
@@ -72,6 +87,7 @@ pub struct App {
     // UI state
     pub hitl_state: ListState,
     pub dlq_state: TableState,
+    pub show_help: bool,
 }
 
 impl App {
@@ -88,10 +104,11 @@ impl App {
             tick_count: 0.0,
             hitl_state: ListState::default(),
             dlq_state: TableState::default(),
+            show_help: false,
         }
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self) -> EyreResult<()> {
         let mut terminal = ratatui::init();
         let (action_tx, mut action_rx) = mpsc::unbounded_channel();
         
@@ -108,35 +125,31 @@ impl App {
 
         let tx_poll = action_tx.clone();
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(Duration::from_millis(100));
+            let mut interval = tokio::time::interval(Duration::from_millis(1000));
             let mut tick_count = 0.0;
             loop {
                 interval.tick().await;
-                tick_count += 0.1;
+                tick_count += 1.0;
                 
                 let _ = tx_poll.send(Action::Tick);
                 let _ = tx_poll.send(Action::Render);
                 
                 // Read metrics
-                if let Ok(content) = std::fs::read_to_string("/tmp/prism_metrics.json") {
+                if let Ok(content) = fs::read_to_string("/tmp/prism_metrics.json") {
                     if let Ok(metrics) = serde_json::from_str::<MetricsData>(&content) {
                         let _ = tx_poll.send(Action::UpdateMetrics(metrics));
                     }
                 }
                 
-                // Read Gatekeeper rules
-                if let Ok(dir) = std::fs::read_dir("/tmp/prism/pending_rules") {
-                    let rules: Vec<String> = dir
-                        .filter_map(Result::ok)
-                        .map(|e| e.file_name().to_string_lossy().to_string())
-                        .collect();
+                // Read Gatekeeper rules from metadata
+                if let Ok(rules) = Self::read_rule_metadata() {
                     let _ = tx_poll.send(Action::UpdateHitl(rules));
                 }
                 
                 // Read DLQ
-                let vault_dir = PathBuf::from("/tmp/prism/vault");
+                let vault_dir = Self::get_base_dir().join("vault");
                 let mut dlq_res = Vec::new();
-                if let Ok(dir) = std::fs::read_dir(&vault_dir) {
+                if let Ok(dir) = fs::read_dir(&vault_dir) {
                     let mut latest_dlq = None;
                     let mut latest_time = std::time::SystemTime::UNIX_EPOCH;
                     for entry in dir.filter_map(Result::ok) {
@@ -153,7 +166,7 @@ impl App {
                         }
                     }
                     if let Some(path) = latest_dlq {
-                        if let Ok(content) = std::fs::read_to_string(&path) {
+                        if let Ok(content) = fs::read_to_string(&path) {
                             for line in content.lines().rev().take(100) {
                                 let ts = line.split(']').next().unwrap_or("Just now").trim_start_matches('[');
                                 let err = line.split("REASON=").nth(1).unwrap_or("Unknown").split(" PAYLOAD=").next().unwrap_or("Unknown");
@@ -168,7 +181,8 @@ impl App {
                 // Read Ledger
                 let mut count = 0;
                 let mut tail = "Empty".to_string();
-                if let Ok(content) = std::fs::read_to_string("/tmp/prism/vault/ledger.log") {
+                let ledger_path = Self::get_base_dir().join("vault").join("ledger.log");
+                if let Ok(content) = fs::read_to_string(&ledger_path) {
                     let lines: Vec<&str> = content.lines().collect();
                     count = lines.len() as u64;
                     if let Some(last) = lines.last() {
@@ -192,13 +206,124 @@ impl App {
         Ok(())
     }
 
-    fn update(&mut self, action: Action) -> Result<()> {
+    fn get_base_dir() -> PathBuf {
+        std::env::var("PRISM_BASE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| PathBuf::from("/tmp/prism"))
+    }
+
+    fn read_rule_metadata() -> EyreResult<Vec<RuleMetadata>> {
+        let mut rules = Vec::new();
+        let metadata_dir = Self::get_base_dir().join("rule_metadata");
+        if metadata_dir.exists() {
+            for entry in fs::read_dir(metadata_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        if let Ok(meta) = serde_json::from_str::<RuleMetadata>(&content) {
+                            rules.push(meta);
+                        }
+                    }
+                }
+            }
+        }
+        rules.sort_by(|a, b| b.created_at.partial_cmp(&a.created_at).unwrap_or(std::cmp::Ordering::Equal));
+        Ok(rules)
+    }
+
+    fn approve_rule_via_gatekeeper(rule_id: &str) -> EyreResult<()> {
+        let metadata_dir = Self::get_base_dir().join("rule_metadata");
+        let meta_path = metadata_dir.join(format!("{}.json", rule_id));
+        
+        if !meta_path.exists() {
+            return Err(eyre_anyhow!("Rule metadata not found"));
+        }
+        
+        let content = fs::read_to_string(&meta_path)?;
+        let mut meta: RuleMetadata = serde_json::from_str(&content)?;
+        
+        if meta.state != "pending" {
+            return Err(eyre_anyhow!("Rule is not in pending state"));
+        }
+        
+        // Move VRL to active rules directory
+        let vrl_src = PathBuf::from(&meta.vrl_path);
+        let rules_dir = PathBuf::from("/tmp/prism/rules");
+        fs::create_dir_all(&rules_dir)?;
+        let vrl_dst = rules_dir.join(vrl_src.file_name().unwrap());
+        
+        // Atomic copy
+        let tmp_dst = vrl_dst.with_extension("vrl.tmp");
+        fs::copy(&vrl_src, &tmp_dst)?;
+        fs::rename(&tmp_dst, &vrl_dst)?;
+        
+        // Update metadata
+        meta.state = "approved".to_string();
+        meta.vrl_path = vrl_dst.to_string_lossy().to_string();
+        meta.updated_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs_f64();
+        
+        fs::write(&meta_path, serde_json::to_string_pretty(&meta)?)?;
+        
+        Ok(())
+    }
+
+    fn reject_rule_via_gatekeeper(rule_id: &str) -> EyreResult<()> {
+        let metadata_dir = Self::get_base_dir().join("rule_metadata");
+        let meta_path = metadata_dir.join(format!("{}.json", rule_id));
+        
+        if !meta_path.exists() {
+            return Err(eyre_anyhow!("Rule metadata not found"));
+        }
+        
+        let content = fs::read_to_string(&meta_path)?;
+        let mut meta: RuleMetadata = serde_json::from_str(&content)?;
+        
+        if meta.state != "pending" && meta.state != "failed" {
+            return Err(eyre_anyhow!("Rule cannot be rejected"));
+        }
+        
+        // Move files to rejected dir
+        let rejected_dir = Self::get_base_dir().join("rejected_rules");
+        fs::create_dir_all(&rejected_dir)?;
+        
+        for src_path_str in [&meta.vrl_path, &meta.yaml_path] {
+            let src = PathBuf::from(src_path_str);
+            if src.exists() {
+                let dst = rejected_dir.join(src.file_name().unwrap());
+                fs::rename(&src, &dst)?;
+            }
+        }
+        
+        meta.state = "rejected".to_string();
+        meta.error = Some("Rejected by operator via TUI".to_string());
+        meta.updated_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs_f64();
+        
+        fs::write(&meta_path, serde_json::to_string_pretty(&meta)?)?;
+        
+        Ok(())
+    }
+
+    fn update(&mut self, action: Action) -> EyreResult<()> {
         match action {
             Action::Quit => self.should_quit = true,
             Action::Key(key) => {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
+                        KeyCode::Char('q') | KeyCode::Esc => {
+                            if self.show_help {
+                                self.show_help = false;
+                            } else {
+                                self.should_quit = true;
+                            }
+                        }
+                        KeyCode::Char('?') | KeyCode::F(1) => {
+                            self.show_help = !self.show_help;
+                        }
                         KeyCode::Tab => {
                             self.active_tab = match self.active_tab {
                                 ActiveTab::Dashboard => ActiveTab::Telemetry,
@@ -241,12 +366,39 @@ impl App {
                             if self.active_tab == ActiveTab::Gatekeeper {
                                 if let Some(i) = self.hitl_state.selected() {
                                     if i < self.hitl_rules.len() {
-                                        let rule = self.hitl_rules[i].clone();
-                                        // Approve by moving from pending_rules to active rules
-                                        let _ = std::fs::rename(
-                                            format!("/tmp/prism/pending_rules/{}", rule),
-                                            format!("/tmp/prism/rules/{}", rule)
-                                        );
+                                        let rule_id = self.hitl_rules[i].rule_id.clone();
+                                        match Self::approve_rule_via_gatekeeper(&rule_id) {
+                                            Ok(_) => {
+                                                // Refresh will happen on next poll
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Failed to approve rule: {}", e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        KeyCode::Char('r') | KeyCode::Delete => {
+                            if self.active_tab == ActiveTab::Gatekeeper {
+                                if let Some(i) = self.hitl_state.selected() {
+                                    if i < self.hitl_rules.len() {
+                                        let rule_id = self.hitl_rules[i].rule_id.clone();
+                                        match Self::reject_rule_via_gatekeeper(&rule_id) {
+                                            Ok(_) => {}
+                                            Err(e) => {
+                                                eprintln!("Failed to reject rule: {}", e);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        KeyCode::Char('p') => {
+                            if self.active_tab == ActiveTab::Gatekeeper {
+                                if let Some(i) = self.hitl_state.selected() {
+                                    if i < self.hitl_rules.len() {
+                                        // Show full preview in a larger area
                                     }
                                 }
                             }
@@ -263,7 +415,7 @@ impl App {
                 }
             }
             Action::UpdateHitl(rules) => {
-                self.hitl_rules = rules.into_iter().filter(|r| !r.ends_with(".approved") && r.ends_with(".vrl")).collect();
+                self.hitl_rules = rules;
             }
             Action::UpdateDlq(items) => {
                 self.dlq_items = items;
@@ -286,13 +438,12 @@ impl App {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
             .constraints([
-                Constraint::Length(3), // Tabs
-                Constraint::Min(0),    // Main Content
-                Constraint::Length(1), // Footer
+                Constraint::Length(3),
+                Constraint::Min(0),
+                Constraint::Length(if self.show_help { 8 } else { 1 }),
             ])
             .split(size);
 
-        // Elegant Title & Tabs
         let titles = vec![" [1] Dashboard ", " [2] Telemetry ", " [3] Gatekeeper (HitL) ", " [4] DLQ Explorer "];
         let tab_index = match self.active_tab {
             ActiveTab::Dashboard => 0,
@@ -315,10 +466,45 @@ impl App {
             ActiveTab::DlqViewer => self.draw_dlq(f, chunks[1]),
         }
 
-        let footer = Paragraph::new(Line::from(vec![
-            Span::raw(" (Tab) Switch Views | (Q) Quit | (Up/Down) Navigate | (A/Enter) Approve Rule "),
-        ])).alignment(Alignment::Center).style(Style::default().fg(Color::DarkGray));
-        f.render_widget(footer, chunks[2]);
+        if self.show_help {
+            let help_text = vec![
+                Line::from(vec![
+                    Span::styled("KEYBINDINGS: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::raw("Tab/1-4: Switch tabs | "),
+                    Span::styled("↑/↓ or j/k: ", Style::default().fg(Color::Cyan)),
+                    Span::raw("Navigate | "),
+                    Span::styled("Enter/A: ", Style::default().fg(Color::Green)),
+                    Span::raw("Approve rule | "),
+                    Span::styled("R/Del: ", Style::default().fg(Color::Red)),
+                    Span::raw("Reject rule | "),
+                    Span::styled("?: ", Style::default().fg(Color::Yellow)),
+                    Span::raw("Toggle help | "),
+                    Span::styled("Q: ", Style::default().fg(Color::Red)),
+                    Span::raw("Quit"),
+                ]),
+                Line::from(vec![
+                    Span::styled("GATEKEEPER STATES: ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+                    Span::styled("⏳ PENDING ", Style::default().fg(Color::Yellow)),
+                    Span::raw("| "),
+                    Span::styled("✅ APPROVED ", Style::default().fg(Color::Green)),
+                    Span::raw("| "),
+                    Span::styled("❌ REJECTED ", Style::default().fg(Color::Red)),
+                    Span::raw("| "),
+                    Span::styled("🚀 DEPLOYED ", Style::default().fg(Color::Blue)),
+                    Span::raw("| "),
+                    Span::styled("💥 FAILED ", Style::default().fg(Color::Magenta)),
+                ]),
+            ];
+            let help = Paragraph::new(help_text)
+                .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(" HELP "))
+                .alignment(Alignment::Left);
+            f.render_widget(help, chunks[2]);
+        } else {
+            let footer = Paragraph::new(Line::from(vec![
+                Span::raw(" (Tab/1-4) Switch | (↑/↓) Navigate | (A/Enter) Approve | (R) Reject | (?) Help | (Q) Quit "),
+            ])).alignment(Alignment::Center).style(Style::default().fg(Color::DarkGray));
+            f.render_widget(footer, chunks[2]);
+        }
     }
 
     fn draw_dashboard(&mut self, f: &mut Frame, area: Rect) {
@@ -327,7 +513,6 @@ impl App {
             .constraints([Constraint::Length(3), Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 
-        // Slim EPS Gauge
         let max_eps = self.eps_history.iter().map(|(_, y)| *y as u64).max().unwrap_or(1).max(1);
         let gauge_pct = ((self.metrics.eps * 100) / max_eps).min(100) as u16;
         let eps_gauge = Gauge::default()
@@ -337,7 +522,6 @@ impl App {
             .label(format!(" {} EPS (peak: {}) ", self.metrics.eps, max_eps));
         f.render_widget(eps_gauge, chunks[0]);
 
-        // Beautiful Line Chart for EPS
         let eps_ds = vec![
             Dataset::default()
                 .name("EPS Velocity")
@@ -347,14 +531,14 @@ impl App {
                 .data(&self.eps_history),
         ];
         
-        let max_eps = self.eps_history.iter().map(|(_, y)| *y).fold(0.0, f64::max).max(100.0);
+        let max_eps_f = self.eps_history.iter().map(|(_, y)| *y).fold(0.0, f64::max).max(100.0);
         let chart = Chart::new(eps_ds)
             .block(Block::default().title(" EVENT VELOCITY ").borders(Borders::ALL).border_type(BorderType::Rounded))
             .x_axis(Axis::default().title("Time").bounds([self.tick_count.max(10.0) - 10.0, self.tick_count.max(10.0)]))
-            .y_axis(Axis::default().title("EPS").bounds([0.0, max_eps]).labels(vec![
+            .y_axis(Axis::default().title("EPS").bounds([0.0, max_eps_f]).labels(vec![
                 Span::raw("0"),
-                Span::raw(format!("{}", max_eps / 2.0)),
-                Span::raw(format!("{}", max_eps)),
+                Span::raw(format!("{}", max_eps_f / 2.0)),
+                Span::raw(format!("{}", max_eps_f)),
             ]));
         f.render_widget(chart, chunks[1]);
 
@@ -400,7 +584,6 @@ impl App {
             .constraints([Constraint::Percentage(33), Constraint::Percentage(34), Constraint::Percentage(33)])
             .split(chunks[0]);
             
-        // Latency
         let lat_str = format!("\n\n{} μs (estimated)", self.metrics.telemetry.latency_us);
         let lat_widget = Paragraph::new(lat_str)
             .block(Block::default().title(" AVG LATENCY ").borders(Borders::ALL).border_type(BorderType::Rounded))
@@ -408,9 +591,8 @@ impl App {
             .alignment(Alignment::Center);
         f.render_widget(lat_widget, top_chunks[0]);
         
-        // AI Status
         let mut ai_running = false;
-        if let Ok(content) = std::fs::read_to_string("/tmp/prism_ai_status") {
+        if let Ok(content) = fs::read_to_string("/tmp/prism_ai_status") {
             if let Ok(ts) = content.trim().parse::<f64>() {
                 if let Ok(sys_time) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
                     if sys_time.as_secs_f64() - ts < 10.0 {
@@ -429,7 +611,6 @@ impl App {
             .alignment(Alignment::Center);
         f.render_widget(ai_widget, top_chunks[1]);
 
-        // Drops
         let drops_str = format!("\n\n{}", self.metrics.drops);
         let drops_widget = Paragraph::new(drops_str)
             .block(Block::default().title(" PACKET DROPS ").borders(Borders::ALL).border_type(BorderType::Rounded))
@@ -437,7 +618,6 @@ impl App {
             .alignment(Alignment::Center);
         f.render_widget(drops_widget, top_chunks[2]);
         
-        // Vendor Breakdown
         let total = (self.metrics.telemetry.fortinet + self.metrics.telemetry.cisco + self.metrics.telemetry.paloalto).max(1);
         let f_pct = (self.metrics.telemetry.fortinet * 100) / total;
         let c_pct = (self.metrics.telemetry.cisco * 100) / total;
@@ -463,14 +643,28 @@ impl App {
             .split(area);
 
         let items: Vec<ListItem> = self.hitl_rules.iter().map(|rule| {
+            let (state_label, state_color) = match rule.state.as_str() {
+                "pending" => ("⏳ PENDING", Color::Yellow),
+                "approved" => ("✅ APPROVED", Color::Green),
+                "rejected" => ("❌ REJECTED", Color::Red),
+                "deployed" => ("🚀 DEPLOYED", Color::Blue),
+                "failed" => ("💥 FAILED", Color::Magenta),
+                _ => ("❓ UNKNOWN", Color::Gray),
+            };
+            
+            let dry_run_indicator = if rule.dry_run_result.is_some() {
+                if rule.state == "failed" { " ✗" } else { " ✓" }
+            } else { "" };
+            
             ListItem::new(Line::from(vec![
-                Span::styled(" ⚠ [PENDING] ", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                Span::raw(rule),
+                Span::styled(format!(" {} {}{}", state_label, dry_run_indicator, ""), Style::default().fg(state_color).add_modifier(Modifier::BOLD)),
+                Span::raw(format!(" [{}] ", rule.device_type)),
+                Span::raw(&rule.rule_id),
             ]))
         }).collect();
         
         let list = List::new(items)
-            .block(Block::default().title(" AI PARSERS AWAITING APPROVAL ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Yellow)))
+            .block(Block::default().title(" AI PARSERS - HITL APPROVAL QUEUE ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Yellow)))
             .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black).add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
         
@@ -478,20 +672,45 @@ impl App {
 
         let preview_text = if let Some(i) = self.hitl_state.selected() {
             if i < self.hitl_rules.len() {
-                if let Ok(content) = std::fs::read_to_string(format!("/tmp/prism/pending_rules/{}", self.hitl_rules[i])) {
-                    content
+                let rule = &self.hitl_rules[i];
+                let mut preview = format!(
+                    "Rule ID: {}\nDevice: {}\nSignature: {}\nState: {}\nCreated: {}\n\n--- VRL CODE ---\n",
+                    rule.rule_id, rule.device_type, rule.signature, rule.state.to_uppercase(),
+                    chrono::DateTime::from_timestamp(rule.created_at as i64, 0)
+                        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
+                        .unwrap_or_else(|| "Unknown".to_string())
+                );
+                
+                // Read VRL content
+                let vrl_path = PathBuf::from(&rule.vrl_path);
+                if vrl_path.exists() {
+                    if let Ok(content) = fs::read_to_string(&vrl_path) {
+                        preview.push_str(&content);
+                    } else {
+                        preview.push_str("Error reading VRL file");
+                    }
                 } else {
-                    "File unreadable".to_string()
+                    preview.push_str("VRL file not found at path");
                 }
+                
+                if let Some(err) = &rule.error {
+                    preview.push_str(&format!("\n\n--- ERROR ---\n{}", err));
+                }
+                if let Some(dry_run) = &rule.dry_run_result {
+                    preview.push_str(&format!("\n\n--- DRY-RUN OUTPUT ---\n{}", dry_run));
+                }
+                
+                preview
             } else {
                 "No rule selected".to_string()
             }
         } else {
-            "Select a rule to preview".to_string()
+            "Select a rule to preview (A=Approve, R=Reject)".to_string()
         };
 
         let preview = Paragraph::new(preview_text)
-            .block(Block::default().title(" RULE PREVIEW ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Cyan)));
+            .block(Block::default().title(" RULE PREVIEW & DRY-RUN OUTPUT ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Cyan)))
+            .wrap(ratatui::widgets::Wrap { trim: false });
         f.render_widget(preview, chunks[1]);
     }
 
