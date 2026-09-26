@@ -406,8 +406,20 @@ impl App {
             .alignment(Alignment::Center);
         f.render_widget(lat_widget, top_chunks[0]);
         
-        // AI Status (Simulated Check)
-        let ai_running = std::process::Command::new("pgrep").arg("-f").arg("prism-brain").output().map(|o| !o.stdout.is_empty()).unwrap_or(false);
+        // AI Status
+        let mut ai_running = false;
+        if let Ok(content) = std::fs::read_to_string("/tmp/prism_ai_status") {
+            if let Ok(ts) = content.trim().parse::<f64>() {
+                if let Ok(sys_time) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
+                    if sys_time.as_secs_f64() - ts < 10.0 {
+                        ai_running = true;
+                    }
+                }
+            } else if content.trim() == "online" {
+                ai_running = true;
+            }
+        }
+        
         let ai_status = if ai_running { "\n\n🟢 ONLINE" } else { "\n\n🔴 OFFLINE" };
         let ai_widget = Paragraph::new(ai_status)
             .block(Block::default().title(" AI CONTROL PLANE ").borders(Borders::ALL).border_type(BorderType::Rounded))
