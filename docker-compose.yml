@@ -26,3 +26,12 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
+
+  prism:
+    build: .
+    container_name: prism
+    ports:
+      - "514:514/udp"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
