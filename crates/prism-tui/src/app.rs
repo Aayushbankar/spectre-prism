@@ -125,7 +125,7 @@ impl App {
                 }
                 
                 // Read Gatekeeper rules
-                if let Ok(dir) = std::fs::read_dir("/tmp/prism/rules") {
+                if let Ok(dir) = std::fs::read_dir("/tmp/prism/pending_rules") {
                     let rules: Vec<String> = dir
                         .filter_map(Result::ok)
                         .map(|e| e.file_name().to_string_lossy().to_string())
@@ -242,10 +242,10 @@ impl App {
                                 if let Some(i) = self.hitl_state.selected() {
                                     if i < self.hitl_rules.len() {
                                         let rule = self.hitl_rules[i].clone();
-                                        // Simulate approval by renaming
+                                        // Approve by moving from pending_rules to active rules
                                         let _ = std::fs::rename(
-                                            format!("/tmp/prism/rules/{}", rule),
-                                            format!("/tmp/prism/rules/{}.approved", rule)
+                                            format!("/tmp/prism/pending_rules/{}", rule),
+                                            format!("/tmp/prism/rules/{}", rule)
                                         );
                                     }
                                 }
@@ -478,7 +478,7 @@ impl App {
 
         let preview_text = if let Some(i) = self.hitl_state.selected() {
             if i < self.hitl_rules.len() {
-                if let Ok(content) = std::fs::read_to_string(format!("/tmp/prism/rules/{}", self.hitl_rules[i])) {
+                if let Ok(content) = std::fs::read_to_string(format!("/tmp/prism/pending_rules/{}", self.hitl_rules[i])) {
                     content
                 } else {
                     "File unreadable".to_string()
