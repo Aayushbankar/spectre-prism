@@ -3903,6 +3903,7 @@ dependencies = [
  "prism-core",
  "prism-ingest",
  "prism-provenance",
+ "rand 0.10.3",
  "serde_json",
  "tokio",
  "uuid",

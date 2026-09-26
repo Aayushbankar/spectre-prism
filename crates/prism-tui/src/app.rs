@@ -31,16 +31,27 @@ pub enum Action {
 }
 
 #[derive(Deserialize, Debug, Clone, Default)]
+pub struct TelemetryData {
+    pub fortinet: u64,
+    pub cisco: u64,
+    pub paloalto: u64,
+    pub latency_us: u64,
+}
+
+#[derive(Deserialize, Debug, Clone, Default)]
 pub struct MetricsData {
     pub eps: u64,
     pub processed: u64,
     pub drops: u64,
     pub dlq: u64,
+    #[serde(default)]
+    pub telemetry: TelemetryData,
 }
 
 #[derive(PartialEq)]
 pub enum ActiveTab {
     Dashboard,
+    Telemetry,
     Gatekeeper,
     DlqViewer,
 }
@@ -189,7 +200,8 @@ impl App {
                         KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
                         KeyCode::Tab => {
                             self.active_tab = match self.active_tab {
-                                ActiveTab::Dashboard => ActiveTab::Gatekeeper,
+                                ActiveTab::Dashboard => ActiveTab::Telemetry,
+                                ActiveTab::Telemetry => ActiveTab::Gatekeeper,
                                 ActiveTab::Gatekeeper => ActiveTab::DlqViewer,
                                 ActiveTab::DlqViewer => ActiveTab::Dashboard,
                             };
@@ -280,11 +292,12 @@ impl App {
             .split(size);
 
         // Header / Tabs
-        let titles = vec![" [1] Dashboard ", " [2] Gatekeeper (HitL) ", " [3] DLQ Explorer "];
+        let titles = vec![" [1] Dashboard ", " [2] Telemetry ", " [3] Gatekeeper (HitL) ", " [4] DLQ Explorer "];
         let tab_index = match self.active_tab {
             ActiveTab::Dashboard => 0,
-            ActiveTab::Gatekeeper => 1,
-            ActiveTab::DlqViewer => 2,
+            ActiveTab::Telemetry => 1,
+            ActiveTab::Gatekeeper => 2,
+            ActiveTab::DlqViewer => 3,
         };
         
         let tabs = Tabs::new(titles)
@@ -297,6 +310,7 @@ impl App {
         // Main Content Area
         match self.active_tab {
             ActiveTab::Dashboard => self.draw_dashboard(f, chunks[1]),
+            ActiveTab::Telemetry => self.draw_telemetry(f, chunks[1]),
             ActiveTab::Gatekeeper => self.draw_gatekeeper(f, chunks[1]),
             ActiveTab::DlqViewer => self.draw_dlq(f, chunks[1]),
         }
@@ -364,6 +378,51 @@ impl App {
             .x_axis(Axis::default().title("Time").bounds([self.tick_count.max(15.0) - 15.0, self.tick_count.max(15.0)]))
             .y_axis(Axis::default().title("Entries").bounds([0.0, self.ledger_history.last().map(|(_, y)| *y).unwrap_or(100.0).max(10.0)]));
         f.render_widget(chart, ledger_chunks[1]);
+    }
+
+    fn draw_telemetry(&mut self, f: &mut Frame, area: Rect) {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+            
+        let top_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(chunks[0]);
+            
+        // Latency
+        let lat_str = format!(" {} μs ", self.metrics.telemetry.latency_us);
+        let lat_widget = Paragraph::new(lat_str)
+            .block(Block::default().title(" AVG PARSING LATENCY ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Center);
+        f.render_widget(lat_widget, top_chunks[0]);
+        
+        // Vendor Breakdown
+        let total = (self.metrics.telemetry.fortinet + self.metrics.telemetry.cisco + self.metrics.telemetry.paloalto).max(1);
+        let f_pct = (self.metrics.telemetry.fortinet * 100) / total;
+        let c_pct = (self.metrics.telemetry.cisco * 100) / total;
+        let p_pct = (self.metrics.telemetry.paloalto * 100) / total;
+        
+        let vendor_stats = format!(
+            "\nFortinet: {} ({}%)\nCisco ASA: {} ({}%)\nPalo Alto: {} ({}%)",
+            self.metrics.telemetry.fortinet, f_pct,
+            self.metrics.telemetry.cisco, c_pct,
+            self.metrics.telemetry.paloalto, p_pct
+        );
+        let vendor_widget = Paragraph::new(vendor_stats)
+            .block(Block::default().title(" LOG SOURCE BREAKDOWN ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(Color::LightGreen))
+            .alignment(Alignment::Left);
+        f.render_widget(vendor_widget, top_chunks[1]);
+        
+        // Some mock detailed chart area for the bottom
+        let chart = Paragraph::new("\n\n(Detailed parsing heatmaps and memory allocations would go here)")
+            .block(Block::default().title(" VRL MEMORY HEAP ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(Color::DarkGray))
+            .alignment(Alignment::Center);
+        f.render_widget(chart, chunks[1]);
     }
 
     fn draw_gatekeeper(&mut self, f: &mut Frame, area: Rect) {
