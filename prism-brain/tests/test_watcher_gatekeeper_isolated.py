@@ -100,8 +100,8 @@ def test_e2e_1000_heuristic():
     dur = time.time() - t0
     eps = count / dur if dur > 0 else 0
     
-    assert os.path.exists(rules_dir)
-    vrl_files = [f for f in os.listdir(rules_dir) if f.endswith(".vrl")]
+    assert os.path.exists(gk.pending_dir)
+    vrl_files = [f for f in os.listdir(gk.pending_dir) if f.endswith(".vrl")]
     assert len(vrl_files) >= 1
     
     print(f"E2E 1000 logs: {dur:.2f}s EPS: {eps:.0f}")
