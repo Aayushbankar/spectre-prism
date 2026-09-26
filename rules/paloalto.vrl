@@ -2,5 +2,15 @@
 . = parse_csv!(.message)
 .class_uid = 4001
 .activity_id = 1
+
+.device = {}
 .device.vendor = "Palo Alto Networks"
 .device.product = "PAN-OS"
+
+.src_endpoint = {}
+.src_endpoint.ip = .[7]
+.src_endpoint.port = .[24]
+
+.dst_endpoint = {}
+.dst_endpoint.ip = .[8]
+.dst_endpoint.port = .[25]
