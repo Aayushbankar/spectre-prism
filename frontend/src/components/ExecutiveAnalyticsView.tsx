@@ -120,7 +120,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
         </div>
       </div>
 
-      {/* Top Row: 3 KPI Cards with Sparklines + 1 Devices Donut (exact layout of dashboard2.jpeg) */}
+      {/* Top Row: 3 Ingestion KPI Cards with Sparklines + 1 Protocol Donut */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Sessions */}
         <div

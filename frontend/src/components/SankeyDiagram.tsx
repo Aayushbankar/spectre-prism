@@ -133,7 +133,7 @@ export const SankeyDiagram: React.FC<Props> = ({ theme }) => {
         )}
       </div>
 
-      {/* Column Headers matching ideainso3.jpeg */}
+      {/* Pipeline Stage Column Headers */}
       <div className="grid grid-cols-3 text-center text-xs font-bold tracking-wider uppercase mb-3">
         <div className={isCyber ? 'text-amber-400' : isDark ? 'text-slate-300' : 'text-slate-700'}>
           Destination / Origin

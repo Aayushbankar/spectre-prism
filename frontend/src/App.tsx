@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import type { DashboardView, DashboardTheme } from './types';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
+import { CommandCenterView } from './components/CommandCenterView';
 import { FlowPipelineView } from './components/FlowPipelineView';
 import { ExecutiveAnalyticsView } from './components/ExecutiveAnalyticsView';
 import { TacticalCommandView } from './components/TacticalCommandView';
@@ -14,13 +15,13 @@ import { ExecutiveBriefing, type SystemScenario } from './components/ExecutiveBr
 import { DashboardExplainerModal } from './components/DashboardExplainerModal';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<DashboardView>('all');
+  const [currentView, setCurrentView] = useState<DashboardView>('command');
   const [theme, setTheme] = useState<DashboardTheme>('dark');
   const [isLiveStreaming, setIsLiveStreaming] = useState<boolean>(true);
   const [scenario, setScenario] = useState<SystemScenario>('baseline');
   const [isExplainerOpen, setIsExplainerOpen] = useState<boolean>(false);
   const [isBackendLive, setIsBackendLive] = useState<boolean>(false);
-  const [liveEps, setLiveEps] = useState<number>(85620);
+  const [liveEps, setLiveEps] = useState<number>(312480);
 
   const [vrlInitialPayload, setVrlInitialPayload] = useState<string | undefined>(undefined);
   const [vrlInitialRule, setVrlInitialRule] = useState<string | undefined>(undefined);
@@ -48,7 +49,7 @@ export function App() {
           : 'bg-[#0f111a] text-slate-100 font-sans'
       }`}
     >
-      {/* Explainer Modal */}
+      {/* Architecture & Compliance Explainer Modal */}
       <DashboardExplainerModal
         isOpen={isExplainerOpen}
         onClose={() => setIsExplainerOpen(false)}
@@ -73,8 +74,8 @@ export function App() {
           onOpenExplainer={() => setIsExplainerOpen(true)}
         />
 
-        <main className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
-          {/* Executive Briefing: Explains what the dashboard is saying in plain English */}
+        <main className="flex-1 p-6 space-y-6 max-w-[1650px] w-full mx-auto">
+          {/* Executive Intelligence Advisory: Explains operational posture and active scenario */}
           <ExecutiveBriefing
             theme={theme}
             scenario={scenario}
@@ -85,7 +86,7 @@ export function App() {
             eps={liveEps}
           />
 
-          {/* Real Backend Bridge & Live Traffic Controller */}
+          {/* Real Backend Bridge & Live Traffic Injector */}
           <LiveBackendBridge
             theme={theme}
             onLiveMetricsUpdate={(metrics) => {
@@ -94,104 +95,55 @@ export function App() {
             }}
           />
 
-          {/* View 1: Ingest & Traffic Flow (Design 1 - ideainso3.jpeg) */}
-          {currentView === 'pipeline' && (
+          {/* Flagship Operational Workspace 1: Master SOC Command Center */}
+          {currentView === 'command' && (
+            <CommandCenterView
+              theme={theme}
+              isLiveStreaming={isLiveStreaming}
+              onOpenGatekeeper={() => setCurrentView('gatekeeper')}
+              onOpenDLQ={() => setCurrentView('dlq')}
+              onOpenVrl={() => setCurrentView('vrl')}
+              onOpenAccounting={() => setCurrentView('accounting')}
+            />
+          )}
+
+          {/* Deep-Dive Workspace 2: Pipeline Topology & Dynamic Normalization */}
+          {currentView === 'flow' && (
             <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 2: Executive Analytics & Operations (Design 2 - dashboard2.jpeg) */}
+          {/* Deep-Dive Workspace 3: Engine Telemetry & Performance SLAs */}
           {currentView === 'analytics' && (
             <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 3: Tactical Cyber Command & Threat Map (Design 3 - dashboard_1.jpeg) */}
-          {currentView === 'tactical' && (
+          {/* Deep-Dive Workspace 4: Tactical Threat Radar & Ballistics */}
+          {currentView === 'threats' && (
             <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 4: Byte Accounting & Fidelity Engine (PRISM Innovation §3.1) */}
+          {/* Deep-Dive Workspace 5: Byte Accounting & Section 65B Evidence Vault (§3.1) */}
           {currentView === 'accounting' && (
             <ByteAccountingView theme={theme} />
           )}
 
-          {/* View 5: Human-in-the-Loop (HitL) Gatekeeper */}
+          {/* Deep-Dive Workspace 6: Autonomous AI Gatekeeper (HitL) */}
           {currentView === 'gatekeeper' && (
             <GatekeeperHITLView theme={theme} onTestRule={handleTestRuleInVrl} />
           )}
 
-          {/* View 6: Dead Letter Queue (DLQ) Inspector */}
+          {/* Deep-Dive Workspace 7: Dead Letter Queue (DLQ) Quarantine */}
           {currentView === 'dlq' && (
             <DLQInspectorView theme={theme} onSendToVrl={handleSendToVrl} />
           )}
 
-          {/* View 7: Interactive VRL Sandbox & Validator */}
+          {/* Deep-Dive Workspace 8: Interactive VRL Sandbox & Validator */}
           {currentView === 'vrl' && (
             <VRLPlaygroundView
               theme={theme}
               initialPayload={vrlInitialPayload}
               initialRule={vrlInitialRule}
             />
-          )}
-
-          {/* View 8: Unified View (All Reference Designs & Spec Innovations Combined) */}
-          {currentView === 'all' && (
-            <div className="space-y-12">
-              {/* Section 1: Ingest Flow (ideainso3.jpeg) */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
-                      DESIGN 1 · ideainso3.jpeg
-                    </span>
-                    <h2 className="text-lg font-bold">Traffic Flow & Pipeline Overview</h2>
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono">Zero-Alloc UDP Buffer → OCSF Egress</span>
-                </div>
-                <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
-              </section>
-
-              {/* Section 2: Executive Analytics (dashboard2.jpeg) */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-purple-500/20 text-purple-400 border border-purple-500/30">
-                      DESIGN 2 · dashboard2.jpeg
-                    </span>
-                    <h2 className="text-lg font-bold">Executive Analytics & Real-Time Telemetry</h2>
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono">Multi-Theme • Live Spline EPS</span>
-                </div>
-                <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
-              </section>
-
-              {/* Section 3: Tactical Cyber Command (dashboard_1.jpeg) */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                      DESIGN 3 · dashboard_1.jpeg
-                    </span>
-                    <h2 className="text-lg font-bold">Tactical Cyber Command & Threat Intelligence</h2>
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono">Global Map • Section 65B History</span>
-                </div>
-                <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
-              </section>
-
-              {/* Section 4: Byte Accounting & Forensic Quorum (PRISM Spec §3.1) */}
-              <section className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                      PRISM SPEC §3.1 INNOVATION
-                    </span>
-                    <h2 className="text-lg font-bold">Byte Accounting & Section 65B Witness Quorum</h2>
-                  </div>
-                  <span className="text-xs text-slate-400 font-mono">FIELD / LITERAL / RESIDUE • 2-of-3 Ed25519</span>
-                </div>
-                <ByteAccountingView theme={theme} />
-              </section>
-            </div>
           )}
         </main>
       </div>

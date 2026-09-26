@@ -1,4 +1,12 @@
-export type DashboardView = 'pipeline' | 'analytics' | 'tactical' | 'accounting' | 'gatekeeper' | 'dlq' | 'vrl' | 'all';
+export type DashboardView =
+  | 'command'     // Unified Master SOC Command Center
+  | 'flow'        // Pipeline Topology & Dynamic Normalization
+  | 'analytics'   // Engine Telemetry & Performance Observability
+  | 'threats'     // Tactical Threat Radar & Geo-Intelligence
+  | 'accounting'  // Byte Accounting & Section 65B Evidence Vault
+  | 'gatekeeper'  // Autonomous AI Control Plane & HitL Staging
+  | 'dlq'         // Dead Letter Queue Anomaly Forensics
+  | 'vrl';        // Vector Remap Language Interactive Sandbox
 
 export type DashboardTheme = 'dark' | 'light' | 'cyber';
 

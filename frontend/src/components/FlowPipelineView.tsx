@@ -27,7 +27,7 @@ export const FlowPipelineView: React.FC<Props> = ({ theme, isLiveStreaming }) =>
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: Dashboard Summary & Health Score (matches ideainso3.jpeg) */}
+      {/* Top Banner: Ingestion Overview & Health Score */}
       <div
         className={`relative overflow-hidden rounded-2xl border p-6 transition-all duration-300 shadow-xl ${
           isCyber
@@ -64,7 +64,7 @@ export const FlowPipelineView: React.FC<Props> = ({ theme, isLiveStreaming }) =>
               <strong className="text-amber-400 font-semibold">118</strong> were not-found (404). The 5xx server errors are the more serious signal to watch, since they point to backend problems rather than client mistakes, and they weigh directly on availability (<strong className="text-emerald-400 font-semibold">{INITIAL_SUMMARY.availabilityPct}%</strong>).
             </p>
 
-            {/* Quick Pills matching ideainso3.jpeg */}
+            {/* Operational Posture Indicators */}
             <div className="flex flex-wrap items-center gap-2 pt-2">
               <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-800/90 text-emerald-400 border border-slate-700/80 shadow-inner flex items-center gap-1.5">
                 <CheckCircle className="w-3.5 h-3.5" />
@@ -140,7 +140,7 @@ export const FlowPipelineView: React.FC<Props> = ({ theme, isLiveStreaming }) =>
         </div>
       </div>
 
-      {/* 4 Stat Cards Row (exact layout of ideainso3.jpeg) */}
+      {/* 4 Ingestion Stat Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* TOTAL REQUESTS */}
         <div
@@ -203,7 +203,7 @@ export const FlowPipelineView: React.FC<Props> = ({ theme, isLiveStreaming }) =>
         </div>
       </div>
 
-      {/* Traffic Flow Sankey Container (matches ideainso3.jpeg) */}
+      {/* Traffic Flow Pipeline Topology Sankey */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">

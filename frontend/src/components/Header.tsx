@@ -6,14 +6,15 @@ import {
   Play,
   Pause,
   Zap,
-  LayoutDashboard,
+  Activity,
   Globe,
-  Layers,
+  LayoutDashboard,
   HelpCircle,
   Cpu,
   AlertTriangle,
   FileCode,
   Binary,
+  ShieldCheck,
 } from 'lucide-react';
 import type { DashboardView, DashboardTheme } from '../types';
 
@@ -38,47 +39,60 @@ export const Header: React.FC<Props> = ({
   const isDark = theme === 'dark' || isCyber;
 
   const viewLabels: Record<DashboardView, { title: string; subtitle: string }> = {
-    pipeline: {
-      title: 'Traffic & Ingestion Flow',
-      subtitle: 'Design 1 (ideainso3.jpeg) · Zero-Alloc Ingest & OCSF Class 4001 Egress Flow',
+    command: {
+      title: 'Sovereign SOC Command Center',
+      subtitle: 'Unified Operational Cockpit · Live Cyber Radar, 300k EPS Telemetry & Section 65B Audit Stream',
+    },
+    flow: {
+      title: 'Pipeline Topology & Normalization',
+      subtitle: 'Tokio Zero-Alloc Ring Buffers · VRL Rules · Dynamic OCSF Class Egress',
     },
     analytics: {
-      title: 'Executive Analytics & Telemetry',
-      subtitle: 'Design 2 (dashboard2.jpeg) · Real-Time Throughput & Firewall Distributions',
+      title: 'Engine Telemetry & Performance SLAs',
+      subtitle: 'Throughput Trends · Multi-Vendor Distribution · Latency Micro-Histograms',
     },
-    tactical: {
-      title: 'Tactical Cyber Command Center',
-      subtitle: 'Design 3 (dashboard_1.jpeg) · Global Attack Vector Map & Section 65B Forensic Ledger',
+    threats: {
+      title: 'Tactical Threat Radar & Ballistics',
+      subtitle: 'Real-Time Attack Vector Tracking · Geolocation Intel · Gateway Interception',
     },
     accounting: {
-      title: 'Byte Accounting & Fidelity Engine',
-      subtitle: 'PRISM Spec §3.1 Innovation · FIELD / LITERAL / RESIDUE Closure Ratio & 2-of-3 Witness Quorum',
+      title: 'Byte Accounting & Legal Vault (§3.1)',
+      subtitle: 'FIELD / LITERAL / RESIDUE Tracking · Closure Ratio & 2-of-3 Witness Quorum',
     },
     gatekeeper: {
-      title: 'Human-in-the-Loop (HitL) Gatekeeper',
-      subtitle: 'AI Rule Approvals · Drain3 Template Mining & ModernBERT Rule Hot-Reloading',
+      title: 'Autonomous AI Gatekeeper (HitL)',
+      subtitle: 'Drain3 Template Mining & ModernBERT Rule Classification Staging Area',
     },
     dlq: {
-      title: 'Dead Letter Queue (DLQ) Inspector',
-      subtitle: 'Quarantined Log Analysis · Root Cause Exception Triage & Reprocessing',
+      title: 'Dead Letter Queue (DLQ) Quarantine',
+      subtitle: 'Anomalous Payload Triage · Root-Cause Analysis & Automated Remediation',
     },
     vrl: {
       title: 'Interactive VRL Sandbox & Validator',
       subtitle: 'Vector Remap Language · Live OCSF Schema Normalization & Proof Verification',
     },
-    all: {
-      title: 'PRISM Unified Command Center',
-      subtitle: 'All 3 Adapted Architectures & Real Backend Telemetry Stream',
-    },
   };
+
+  const navButtons: Array<{ id: DashboardView; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+    { id: 'command', label: 'Command', icon: LayoutDashboard },
+    { id: 'flow', label: 'Topology', icon: Zap },
+    { id: 'analytics', label: 'Telemetry', icon: Activity },
+    { id: 'threats', label: 'Radar', icon: Globe },
+    { id: 'accounting', label: 'Vault', icon: Binary },
+    { id: 'gatekeeper', label: 'AI Gate', icon: Cpu },
+    { id: 'dlq', label: 'DLQ', icon: AlertTriangle },
+    { id: 'vrl', label: 'Sandbox', icon: FileCode },
+  ];
+
+  const currentMeta = viewLabels[currentView] || viewLabels.command;
 
   return (
     <header
-      className={`border-b px-6 py-4 transition-all duration-300 ${
+      className={`border-b px-6 py-4 transition-all duration-300 select-none ${
         isCyber
-          ? 'border-amber-500/20 bg-black/90 text-amber-50'
+          ? 'border-amber-500/20 bg-black/95 text-amber-50'
           : isDark
-          ? 'border-slate-800 bg-[#12141d]/90 text-slate-100 backdrop-blur-md'
+          ? 'border-slate-800 bg-[#0f111a]/95 text-slate-100 backdrop-blur-md'
           : 'border-slate-200 bg-white/95 text-slate-800 shadow-sm'
       }`}
     >
@@ -86,7 +100,7 @@ export const Header: React.FC<Props> = ({
         {/* Left: View Title & Subtitle */}
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight">{viewLabels[currentView].title}</h1>
+            <h1 className="text-xl font-extrabold tracking-tight">{currentMeta.title}</h1>
             <span
               className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
                 isCyber
@@ -94,119 +108,44 @@ export const Header: React.FC<Props> = ({
                   : 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
               }`}
             >
-              PRISM v1.9
+              PRISM v1.9-PROD
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">{viewLabels[currentView].subtitle}</p>
+          <p className="text-xs text-slate-400 mt-0.5 font-medium">{currentMeta.subtitle}</p>
         </div>
 
-        {/* View Switcher Tabs (Quick Access to D1, D2, D3, HitL, DLQ, VRL, All) */}
-        <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium">
-          <button
-            onClick={() => onViewChange('pipeline')}
-            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'pipeline'
-                ? 'bg-cyan-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5" />
-            <span>Flow (D1)</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('analytics')}
-            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'analytics'
-                ? 'bg-purple-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>Analytics (D2)</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('tactical')}
-            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'tactical'
-                ? 'bg-amber-500 text-black font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span>Tactical (D3)</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('accounting')}
-            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'accounting'
-                ? 'bg-emerald-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Binary className="w-3.5 h-3.5" />
-            <span>Accounting</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('gatekeeper')}
-            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'gatekeeper'
-                ? 'bg-purple-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Cpu className="w-3.5 h-3.5" />
-            <span>HitL</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('dlq')}
-            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'dlq'
-                ? 'bg-rose-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5" />
-            <span>DLQ</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('vrl')}
-            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'vrl'
-                ? 'bg-blue-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <FileCode className="w-3.5 h-3.5" />
-            <span>VRL Sandbox</span>
-          </button>
-
-          <button
-            onClick={() => onViewChange('all')}
-            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              currentView === 'all'
-                ? 'bg-emerald-600 text-white font-bold shadow'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            <span>Unified</span>
-          </button>
+        {/* View Switcher Tabs (Quick Access to Core Workspaces) */}
+        <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-semibold">
+          {navButtons.map((btn) => {
+            const Icon = btn.icon;
+            const isActive = currentView === btn.id;
+            return (
+              <button
+                key={btn.id}
+                onClick={() => onViewChange(btn.id)}
+                className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  isActive
+                    ? isCyber
+                      ? 'bg-amber-500 text-black font-bold shadow'
+                      : 'bg-cyan-600 text-white font-bold shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{btn.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Right: Actions, Explainer, Live Stream Toggle, Search & User Avatar */}
+        {/* Right: Actions, Guide, Live Stream Toggle, Search & User Avatar */}
         <div className="flex items-center gap-2.5">
-          {/* How This Works Guide Button */}
+          {/* Architecture Guide Button */}
           {onOpenExplainer && (
             <button
               onClick={onOpenExplainer}
               className="px-2.5 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-950/80 text-xs font-semibold flex items-center gap-1.5 transition"
-              title="Learn how this dashboard works and what it means"
+              title="Architecture & Compliance Guide"
             >
               <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
               <span className="hidden sm:inline">Guide</span>
@@ -232,8 +171,8 @@ export const Header: React.FC<Props> = ({
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search IP, Hash, CVE..."
-              className="w-44 lg:w-52 pl-9 pr-3 py-1.5 rounded-xl text-xs bg-slate-900/80 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition"
+              placeholder="Search IP, Hash, VRL..."
+              className="w-44 lg:w-52 pl-9 pr-3 py-1.5 rounded-xl text-xs bg-slate-900/90 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
 
@@ -241,7 +180,7 @@ export const Header: React.FC<Props> = ({
           <button
             onClick={() => alert('Exporting PRISM OCSF NDJSON Batch (Section 65B Merkle Rooted)...')}
             className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition"
-            title="Download OCSF NDJSON Payload"
+            title="Download OCSF Forensic Bundle"
           >
             <Download className="w-4 h-4" />
           </button>
@@ -256,16 +195,16 @@ export const Header: React.FC<Props> = ({
             </span>
           </div>
 
-          {/* User Profile (matches Malena Bayer in dashboard2.jpeg) */}
+          {/* User Profile */}
           <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 to-rose-500 p-0.5 shadow">
-              <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-xs font-bold text-amber-300">
-                MB
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-400 to-indigo-500 p-0.5 shadow">
+              <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-xs font-bold text-cyan-300">
+                NS
               </div>
             </div>
             <div className="hidden xl:block text-left text-xs leading-tight">
-              <div className="font-bold text-slate-200">Malena Bayer</div>
-              <div className="text-[10px] text-slate-400">SecOps Lead</div>
+              <div className="font-bold text-slate-200">NTRO SecOps</div>
+              <div className="text-[10px] text-slate-400">Chief Operator</div>
             </div>
           </div>
         </div>

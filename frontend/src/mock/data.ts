@@ -123,7 +123,7 @@ export const TOP_PAGES_RANKED = [
   { path: 'ai.laya_modernbert.classifier', count: 4120, percentage: 7, color: '#6366f1' },
 ];
 
-// SANKEY DATA matching Design 1 ideainso3.jpeg
+// INGESTION & OCSF FLOW TOPOLOGY DATA
 export const SANKEY_NODES: SankeyNode[] = [
   // Col 0: Destination / Origin Sources
   { id: 'CN', label: 'CN · China', col: 0, value: 2621, color: '#ef4444', flag: '🇨🇳' },

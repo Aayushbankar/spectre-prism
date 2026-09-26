@@ -21,7 +21,7 @@ export const TacticalCommandView: React.FC<Props> = ({ theme, isLiveStreaming })
       {/* Audit Modal for Section 65B Compliance */}
       <MerkleAuditModal event={selectedAuditEvt} onClose={() => setSelectedAuditEvt(null)} />
 
-      {/* Top Section: Histogram + World Threat Map + Telemetry Area (matches dashboard_1.jpeg) */}
+      {/* Top Section: Ingestion Frequency Histogram + World Threat Vector Radar */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* 1. Multi-series Frequency Histogram (3 cols) */}
         <div className="lg:col-span-4 rounded-2xl border border-amber-500/25 bg-[#0f1118] p-4 shadow-xl flex flex-col justify-between">
