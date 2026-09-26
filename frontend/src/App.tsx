@@ -9,6 +9,7 @@ import { LiveBackendBridge } from './components/LiveBackendBridge';
 import { GatekeeperHITLView } from './components/GatekeeperHITLView';
 import { DLQInspectorView } from './components/DLQInspectorView';
 import { VRLPlaygroundView } from './components/VRLPlaygroundView';
+import { ByteAccountingView } from './components/ByteAccountingView';
 import { ExecutiveBriefing, type SystemScenario } from './components/ExecutiveBriefing';
 import { DashboardExplainerModal } from './components/DashboardExplainerModal';
 
@@ -108,17 +109,22 @@ export function App() {
             <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 4: Human-in-the-Loop (HitL) Gatekeeper */}
+          {/* View 4: Byte Accounting & Fidelity Engine (PRISM Innovation §3.1) */}
+          {currentView === 'accounting' && (
+            <ByteAccountingView theme={theme} />
+          )}
+
+          {/* View 5: Human-in-the-Loop (HitL) Gatekeeper */}
           {currentView === 'gatekeeper' && (
             <GatekeeperHITLView theme={theme} onTestRule={handleTestRuleInVrl} />
           )}
 
-          {/* View 5: Dead Letter Queue (DLQ) Inspector */}
+          {/* View 6: Dead Letter Queue (DLQ) Inspector */}
           {currentView === 'dlq' && (
             <DLQInspectorView theme={theme} onSendToVrl={handleSendToVrl} />
           )}
 
-          {/* View 6: Interactive VRL Sandbox & Validator */}
+          {/* View 7: Interactive VRL Sandbox & Validator */}
           {currentView === 'vrl' && (
             <VRLPlaygroundView
               theme={theme}
@@ -127,7 +133,7 @@ export function App() {
             />
           )}
 
-          {/* View 7: Unified View (All 3 Reference Designs Combined) */}
+          {/* View 8: Unified View (All Reference Designs & Spec Innovations Combined) */}
           {currentView === 'all' && (
             <div className="space-y-12">
               {/* Section 1: Ingest Flow (ideainso3.jpeg) */}
@@ -170,6 +176,20 @@ export function App() {
                   <span className="text-xs text-slate-400 font-mono">Global Map • Section 65B History</span>
                 </div>
                 <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
+              </section>
+
+              {/* Section 4: Byte Accounting & Forensic Quorum (PRISM Spec §3.1) */}
+              <section className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      PRISM SPEC §3.1 INNOVATION
+                    </span>
+                    <h2 className="text-lg font-bold">Byte Accounting & Section 65B Witness Quorum</h2>
+                  </div>
+                  <span className="text-xs text-slate-400 font-mono">FIELD / LITERAL / RESIDUE • 2-of-3 Ed25519</span>
+                </div>
+                <ByteAccountingView theme={theme} />
               </section>
             </div>
           )}

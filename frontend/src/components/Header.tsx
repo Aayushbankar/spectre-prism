@@ -13,6 +13,7 @@ import {
   Cpu,
   AlertTriangle,
   FileCode,
+  Binary,
 } from 'lucide-react';
 import type { DashboardView, DashboardTheme } from '../types';
 
@@ -48,6 +49,10 @@ export const Header: React.FC<Props> = ({
     tactical: {
       title: 'Tactical Cyber Command Center',
       subtitle: 'Design 3 (dashboard_1.jpeg) · Global Attack Vector Map & Section 65B Forensic Ledger',
+    },
+    accounting: {
+      title: 'Byte Accounting & Fidelity Engine',
+      subtitle: 'PRISM Spec §3.1 Innovation · FIELD / LITERAL / RESIDUE Closure Ratio & 2-of-3 Witness Quorum',
     },
     gatekeeper: {
       title: 'Human-in-the-Loop (HitL) Gatekeeper',
@@ -131,6 +136,18 @@ export const Header: React.FC<Props> = ({
           >
             <Globe className="w-3.5 h-3.5" />
             <span>Tactical (D3)</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('accounting')}
+            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+              currentView === 'accounting'
+                ? 'bg-emerald-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Binary className="w-3.5 h-3.5" />
+            <span>Accounting</span>
           </button>
 
           <button

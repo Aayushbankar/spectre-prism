@@ -14,6 +14,7 @@ import {
   Cpu,
   AlertTriangle,
   FileCode,
+  Binary,
 } from 'lucide-react';
 import type { DashboardView, DashboardTheme } from '../types';
 
@@ -32,6 +33,7 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
     { id: 'pipeline' as DashboardView, label: 'Ingest Flow', icon: Zap, badge: 'D1' },
     { id: 'analytics' as DashboardView, label: 'Analytics', icon: LayoutDashboard, badge: 'D2' },
     { id: 'tactical' as DashboardView, label: 'Tactical Map', icon: Globe, badge: 'D3' },
+    { id: 'accounting' as DashboardView, label: 'Byte Accounting', icon: Binary, badge: '§3.1' },
     { id: 'gatekeeper' as DashboardView, label: 'HitL Gatekeeper', icon: Cpu, badge: 'AI' },
     { id: 'dlq' as DashboardView, label: 'DLQ Inspector', icon: AlertTriangle, badge: 'ERR' },
     { id: 'vrl' as DashboardView, label: 'VRL Sandbox', icon: FileCode, badge: 'TEST' },
