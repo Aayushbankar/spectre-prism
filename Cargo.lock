@@ -3985,6 +3985,8 @@ dependencies = [
 name = "prism-tui"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "chrono",
  "color-eyre",
  "crossterm",
  "futures",

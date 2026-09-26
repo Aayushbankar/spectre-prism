@@ -31,5 +31,9 @@ def test_coder_llama_q4_07s():
 
 def test_coder_heuristic_fallback_on_ollama_down():
     c = VrlCoder({"device": "cpu", "coder": {"enabled": True, "host": "http://127.0.0.1:59999", "timeout": 0.5}})
-    vrl = c.generate_vrl("unknown template", "Unknown")
-    assert vrl == '.ip = "0.0.0.0"'
+    vrl = c.generate_vrl("unknown template", "Firewall")  # "Unknown" now defaults to Firewall
+    # New fallback does NOT include parse_syslog (uses regex directly)
+    assert ".message = parse_syslog!(.message)" not in vrl
+    assert ".class_uid = 4001" in vrl
+    assert ".ip =" in vrl
+    assert "parse_regex" in vrl
