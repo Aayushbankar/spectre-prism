@@ -78,9 +78,17 @@ def main():
                             
                             try:
                                 data = json.loads(line)
-                                payload = data.get("payload", line)
+                                raw = data.get("raw_payload", data.get("payload", line))
+                                if isinstance(raw, str) and raw.startswith("utf8:"):
+                                    payload = raw[5:]
+                                else:
+                                    payload = str(raw)
                             except:
-                                payload = line
+                                if "PAYLOAD=" in line:
+                                    payload = line.split("PAYLOAD=", 1)[1].strip()
+                                else:
+                                    payload = line.strip()
+
                             
                             sig = normalize_log_signature(payload)
                             print(f"\n[AI] Detected Unknown Payload in DLQ (sig={sig[:8]}):\n{payload.strip()}")

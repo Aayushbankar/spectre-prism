@@ -1,6 +1,5 @@
 use std::net::UdpSocket;
 use std::time::Instant;
-use std::sync::Arc;
 use std::thread;
 
 fn main() {

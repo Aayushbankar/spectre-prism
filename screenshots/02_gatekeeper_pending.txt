@@ -1,0 +1,35 @@
+╔ PRISM ADVANCED DATA PLANE ═══════════════════════════════════════════════════════════════════════════════════════════╗
+║  [1] Dashboard   |   [2] Telemetry   |   [3] Gatekeeper (HitL)   |   [4] DLQ Explorer                                ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
+╭ AI PARSERS - HITL APPROVAL QUEUE ────────────╮╭ RULE PREVIEW & DRY-RUN OUTPUT ───────────────────────────────────────╮
+│>>  ⏳ PENDING  ✓ [Firewall] rule_firewall_bea││Rule ID: rule_firewall_bea825b1                                       │
+│                                              ││Device: Firewall                                                      │
+│                                              ││Signature: auto_firewall_1790458862                                   │
+│                                              ││State: PENDING                                                        │
+│                                              ││Created: 2026-09-26 21:41:02                                          │
+│                                              ││                                                                      │
+│                                              ││--- VRL CODE ---                                                      │
+│                                              ││.class_uid = 4001                                                     │
+│                                              ││.category_uid = 4                                                     │
+│                                              ││.type_uid = 400101                                                    │
+│                                              ││m_src, err = parse_regex(string!(.message),                           │
+│                                              ││r'SRC=(?P<src>\d+\.\d+\.\d+\.\d+)')                                   │
+│                                              ││if err == null {                                                      │
+│                                              ││  .src_endpoint.ip = m_src.src                                        │
+│                                              ││}                                                                     │
+│                                              ││m_dst, err = parse_regex(string!(.message),                           │
+│                                              ││r'DST=(?P<dst>\d+\.\d+\.\d+\.\d+)')                                   │
+│                                              ││if err == null {                                                      │
+│                                              ││  .dst_endpoint.ip = m_dst.dst                                        │
+│                                              ││}                                                                     │
+│                                              ││m_ip, err = parse_regex(string!(.message),                            │
+│                                              ││r'(?P<ip>\d+\.\d+\.\d+\.\d+)')                                        │
+│                                              ││if err == null {                                                      │
+│                                              ││  .ip = m_ip.ip                                                       │
+│                                              ││  if .src_endpoint.ip == null {                                       │
+│                                              ││    .src_endpoint.ip = m_ip.ip                                        │
+│                                              ││  }                                                                   │
+│                                              ││  if .dst_endpoint.ip == null {                                       │
+│                                              ││    .dst_endpoint.ip = m_ip.ip                                        │
+╰──────────────────────────────────────────────╯╰──────────────────────────────────────────────────────────────────────╯
+                (Tab/1-4) Switch | (↑/↓) Navigate | (A/Enter) Approve | (R) Reject | (?) Help | (Q) Quit

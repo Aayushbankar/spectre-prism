@@ -1,16 +1,6 @@
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum ProfilerError {
-    #[error("No samples provided")]
-    NoSamples,
-    #[error("Laya enrichment failed: {0}")]
-    LayaEnrichment(String),
-    #[error("Invalid sample: {0}")]
-    InvalidSample(String),
-}
 
 #[derive(Error, Debug)]
 pub enum ProfilerError {
@@ -254,7 +244,7 @@ pub async fn profile(samples: &[String]) -> Result<SourceProfile, anyhow::Error>
         })
         .collect();
 
-    let (wire_format, wire_format_confidence, mut evidence) = infer_wire_format(&samples, &decoder_chain);
+    let (wire_format, wire_format_confidence, mut evidence) = infer_wire_format(&samples, &decoder_steps);
     let extracted_field_names = available_field_names(&samples);
     let stable_detector_terms = derive_detectors(&samples);
     let vocabulary = Vocabulary::new(&samples, &extracted_field_names);
@@ -369,7 +359,7 @@ fn infer_wire_format(samples: &[String], decoders: &[DecoderStep]) -> (String, f
         if decoders.is_empty() {
             "none".into()
         } else {
-            decoders.iter().map(|d| d.decoder.as_str()).collect::<Vec<_>>().join(" -> ")
+            decoders.iter().map(|d| d.decoder).collect::<Vec<_>>().join(" -> ")
         }
     )];
     if syslog >= 0.5 {
@@ -603,6 +593,7 @@ fn is_stable_literal(s: &str) -> bool {
         "jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec", "mon",
         "tue", "wed", "thu", "fri", "sat", "sun",
     ];
+
     if CALENDAR.contains(&t.to_ascii_lowercase().as_str()) {
         return false;
     }
@@ -733,14 +724,6 @@ fn explicit_envelope_identity(text: &str, wire_format: &str) -> Option<(String, 
 
 fn round(n: f64) -> f64 {
     (n * 1000.0).round() / 1000.0
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct VendorHypothesis {
-    pub vendor: String,
-    pub product: String,
-    pub confidence: f64,
-    pub evidence: Vec<String>,
 }
 
 #[cfg(test)]

@@ -52,22 +52,47 @@ impl VrlEngine {
             
             let _ = watcher.watch(&watch_dir, RecursiveMode::NonRecursive);
 
-            while let Some(event) = rx.recv().await {
-                let notify::Event { kind, paths, .. } = event;
-                if matches!(kind, EventKind::Create(_) | EventKind::Modify(_)) {
-                    for path in paths {
-                        if path.extension().and_then(|s| s.to_str()) == Some("vrl") {
-                            if let Ok(content) = std::fs::read_to_string(&path) {
-                                let fns = all();
-                                match compile(&content, &fns) {
-                                    Ok(res) => {
-                                        if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
-                                            progs_clone.write().unwrap().insert(name.to_string(), res.program);
-                                            println!("Successfully compiled and hot-reloaded: {}", name);
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+            loop {
+                tokio::select! {
+                    Some(event) = rx.recv() => {
+                        let notify::Event { kind, paths, .. } = event;
+                        if matches!(kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Any) {
+                            for path in paths {
+                                if path.extension().and_then(|s| s.to_str()) == Some("vrl") {
+                                    if let Ok(content) = std::fs::read_to_string(&path) {
+                                        let fns = all();
+                                        match compile(&content, &fns) {
+                                            Ok(res) => {
+                                                if let Some(name) = path.file_stem().and_then(|s| s.to_str()) {
+                                                    progs_clone.write().unwrap().insert(name.to_string(), res.program);
+                                                    println!("Successfully compiled and hot-reloaded: {}", name);
+                                                }
+                                            }
+                                            Err(e) => {
+                                                eprintln!("Failed to compile VRL file {}: {:?}", path.display(), e);
+                                            }
                                         }
                                     }
-                                    Err(e) => {
-                                        eprintln!("Failed to compile VRL file {}: {:?}", path.display(), e);
+                                }
+                            }
+                        }
+                    }
+                    _ = interval.tick() => {
+                        if let Ok(entries) = std::fs::read_dir(&watch_dir) {
+                            for entry in entries.flatten() {
+                                if entry.path().extension().and_then(|s| s.to_str()) == Some("vrl") {
+                                    if let Some(name) = entry.path().file_stem().and_then(|s| s.to_str()) {
+                                        let already_loaded = progs_clone.read().unwrap().contains_key(name);
+                                        if !already_loaded {
+                                            if let Ok(content) = std::fs::read_to_string(entry.path()) {
+                                                let fns = all();
+                                                if let Ok(res) = compile(&content, &fns) {
+                                                    progs_clone.write().unwrap().insert(name.to_string(), res.program);
+                                                    println!("Rescan successfully compiled and hot-reloaded: {}", name);
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -75,7 +100,6 @@ impl VrlEngine {
                     }
                 }
             }
-            drop(watcher);
         });
 
         Ok(Self { programs })
@@ -96,21 +120,66 @@ impl VrlEngine {
         let tz = TimeZone::default();
         let mut ctx = Context::new(&mut target, &mut state, &tz);
 
-        let vendor_prefix = match vendor {
-            Vendor::Fortinet => "fortinet",
-            Vendor::CiscoAsa => "cisco",
-            Vendor::PaloAlto => "palo",
-            Vendor::Unknown => bail!("Unknown vendor, cannot parse"),
-        };
-
         let progs = self.programs.read().unwrap();
-        for (name, prog) in progs.iter() {
-            if name.starts_with(vendor_prefix) {
-                let _ = prog.resolve(&mut ctx);
+        match vendor {
+            Vendor::Fortinet => {
+                for (name, prog) in progs.iter() {
+                    if name.starts_with("fortinet") {
+                        let _ = prog.resolve(&mut ctx);
+                    }
+                }
+                Ok(target.value)
+            }
+            Vendor::CiscoAsa => {
+                for (name, prog) in progs.iter() {
+                    if name.starts_with("cisco") {
+                        let _ = prog.resolve(&mut ctx);
+                    }
+                }
+                Ok(target.value)
+            }
+            Vendor::PaloAlto => {
+                for (name, prog) in progs.iter() {
+                    if name.starts_with("palo") {
+                        let _ = prog.resolve(&mut ctx);
+                    }
+                }
+                Ok(target.value)
+            }
+            Vendor::Unknown => {
+                let mut matched = false;
+                for (name, prog) in progs.iter() {
+                    if !name.starts_with("fortinet") && !name.starts_with("cisco") && !name.starts_with("palo") {
+                        let mut test_map = BTreeMap::new();
+                        test_map.insert("message".into(), Value::from(raw_log));
+                        let mut test_target = TargetValue {
+                            value: Value::Object(test_map),
+                            metadata: Value::Object(BTreeMap::new()),
+                            secrets: Secrets::new(),
+                        };
+                        let mut test_state = RuntimeState::default();
+                        let mut test_ctx = Context::new(&mut test_target, &mut test_state, &tz);
+                        if prog.resolve(&mut test_ctx).is_ok() {
+                            if let Value::Object(ref obj) = test_target.value {
+                                let has_domain_fields = obj.keys().any(|k| {
+                                    k != "message" && k != "class_uid" && k != "category_uid" && k != "type_uid"
+                                });
+                                if obj.contains_key("class_uid") && has_domain_fields {
+                                    target = test_target;
+                                    matched = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                if matched {
+                    Ok(target.value)
+                } else {
+                    bail!("Unknown vendor, cannot parse")
+                }
             }
         }
-        
-        Ok(target.value)
     }
 
     pub fn run_dry_run(path: &Path, payload: &str) -> Result<String> {
