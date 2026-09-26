@@ -103,7 +103,7 @@ impl App {
                 }
                 
                 // Read rules dir (Gatekeeper HitL)
-                let rules_dir = PathBuf::from("/etc/prism/rules");
+                let rules_dir = PathBuf::from("/tmp/prism/rules");
                 if let Ok(dir) = std::fs::read_dir(&rules_dir) {
                     let rules: Vec<String> = dir
                         .filter_map(Result::ok)
@@ -113,17 +113,36 @@ impl App {
                 }
                 
                 // Read DLQ
-                let dlq_path = PathBuf::from("/var/run/prism/dlq.jsonl");
+                let vault_dir = PathBuf::from("/tmp/prism/vault");
                 let mut dlq_res = Vec::new();
-                if let Ok(content) = std::fs::read_to_string(&dlq_path) {
-                    for line in content.lines().rev().take(20) {
-                        // Very naive parsing for demo
-                        if line.contains("\"payload\":") {
-                            dlq_res.push(("Just now".to_string(), "Unknown Vendor".to_string(), "...".to_string()));
+                if let Ok(dir) = std::fs::read_dir(&vault_dir) {
+                    let mut latest_dlq = None;
+                    let mut latest_time = std::time::SystemTime::UNIX_EPOCH;
+                    for entry in dir.filter_map(Result::ok) {
+                        let name = entry.file_name().to_string_lossy().to_string();
+                        if name.starts_with("dlq_") && name.ends_with(".log") {
+                            if let Ok(meta) = entry.metadata() {
+                                if let Ok(modified) = meta.modified() {
+                                    if modified > latest_time {
+                                        latest_time = modified;
+                                        latest_dlq = Some(entry.path());
+                                    }
+                                }
+                            }
                         }
                     }
-                    let _ = tx.send(Action::UpdateDlq(dlq_res));
+                    if let Some(path) = latest_dlq {
+                        if let Ok(content) = std::fs::read_to_string(&path) {
+                            for line in content.lines().rev().take(20) {
+                                let ts = line.split("\"timestamp\":\"").nth(1).unwrap_or("Just now").split('"').next().unwrap_or("Just now");
+                                let err = line.split("\"error\":\"").nth(1).unwrap_or("Unknown").split('"').next().unwrap_or("Unknown");
+                                let payload = line.split("\"payload\":\"").nth(1).unwrap_or(line).split('"').next().unwrap_or(line);
+                                dlq_res.push((ts.to_string(), err.to_string(), payload.to_string()));
+                            }
+                        }
+                    }
                 }
+                let _ = tx.send(Action::UpdateDlq(dlq_res));
                 
                 // Read Vault Ledger
                 let ledger_path = PathBuf::from("/tmp/prism/vault/ledger.log");
@@ -246,7 +265,7 @@ impl App {
             Row::new(vec![Cell::from(ts.as_str()), Cell::from(err.as_str()), Cell::from(payload.as_str())])
         }).collect();
 
-        let table = Table::new(rows, [Constraint::Length(20), Constraint::Length(20), Constraint::Min(20)])
+        let table = Table::new(rows, [Constraint::Length(15), Constraint::Length(15), Constraint::Min(20)])
             .header(header)
             .block(Block::default().title("Dead Letter Queue (DLQ)").borders(Borders::ALL));
         f.render_widget(table, top_chunks[1]);
