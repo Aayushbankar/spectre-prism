@@ -5,6 +5,7 @@ import sys
 import os
 import logging
 import requests
+import re
 from typing import Optional
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -56,18 +57,7 @@ class VrlCoder:
                 content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
                 
                 # Strip markdown code blocks
-                if "```" in content:
-                    lines = content.split("\n")
-                    cleaned = []
-                    in_block = False
-                    for line in lines:
-                        if line.strip().startswith("```"):
-                            in_block = not in_block
-                            continue
-                        if in_block or not any("```" in l for l in lines):
-                            cleaned.append(line)
-                    if in_block: # If there was a block, use the cleaned version
-                        content = "\n".join(cleaned)
+                content = re.sub(r'```\w*\n?', '', content).strip()
 
                 logger.info(f"Coder: LLM generated VRL successfully: \n{content}")
                 return content
