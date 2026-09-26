@@ -105,13 +105,17 @@ async fn main() -> anyhow::Result<()> {
     let processed_clone = processed_events.clone();
     let dlq_clone = dlq_count.clone();
 
-    // 1. UdpListener tasks (8 parallel sockets via SO_REUSEPORT)
-    for _ in 0..8 {
+    for i in 0..8 {
         let sender_clone = sender.clone();
         let config_clone = config.clone();
         tokio::spawn(async move {
-            if let Ok(listener) = UdpListener::new(config_clone, sender_clone).await {
-                let _ = listener.run().await;
+            match UdpListener::new(config_clone, sender_clone).await {
+                Ok(listener) => {
+                    let _ = listener.run().await;
+                }
+                Err(e) => {
+                    eprintln!("Worker {} failed to bind UDP socket: {}", i, e);
+                }
             }
         });
     }
