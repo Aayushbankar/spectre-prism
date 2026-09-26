@@ -1,0 +1,6 @@
+# Basic Palo Alto VRL mapping to OCSF
+. = parse_csv!(.message)
+.class_uid = 4001
+.activity_id = 1
+.device.vendor = "Palo Alto Networks"
+.device.product = "PAN-OS"

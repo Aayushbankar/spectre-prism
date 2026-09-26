@@ -62,7 +62,7 @@ pub struct App {
     
     // Data state
     pub metrics: MetricsData,
-    pub eps_history: VecDeque<u64>,
+    pub eps_history: Vec<(f64, f64)>, // Format for Chart
     pub dlq_items: Vec<(String, String, String)>,
     pub hitl_rules: Vec<String>,
     pub ledger_tail: String,
@@ -80,7 +80,7 @@ impl App {
             should_quit: false,
             active_tab: ActiveTab::Dashboard,
             metrics: MetricsData::default(),
-            eps_history: VecDeque::with_capacity(200),
+            eps_history: Vec::new(),
             dlq_items: Vec::new(),
             hitl_rules: Vec::new(),
             ledger_tail: "Empty".to_string(),
@@ -112,6 +112,8 @@ impl App {
             let mut tick_count = 0.0;
             loop {
                 interval.tick().await;
+                tick_count += 0.1;
+                
                 let _ = tx_poll.send(Action::Tick);
                 let _ = tx_poll.send(Action::Render);
                 
@@ -164,7 +166,6 @@ impl App {
                 let _ = tx_poll.send(Action::UpdateDlq(dlq_res));
                 
                 // Read Ledger
-                tick_count += 0.1;
                 let mut count = 0;
                 let mut tail = "Empty".to_string();
                 if let Ok(content) = std::fs::read_to_string("/tmp/prism/vault/ledger.log") {
@@ -256,13 +257,13 @@ impl App {
             }
             Action::UpdateMetrics(m) => {
                 self.metrics = m;
-                self.eps_history.push_back(self.metrics.eps);
-                if self.eps_history.len() > 150 {
-                    self.eps_history.pop_front();
+                self.eps_history.push((self.tick_count, self.metrics.eps as f64));
+                if self.eps_history.len() > 100 {
+                    self.eps_history.remove(0);
                 }
             }
             Action::UpdateHitl(rules) => {
-                self.hitl_rules = rules.into_iter().filter(|r| !r.ends_with(".approved")).collect();
+                self.hitl_rules = rules.into_iter().filter(|r| !r.ends_with(".approved") && r.ends_with(".vrl")).collect();
             }
             Action::UpdateDlq(items) => {
                 self.dlq_items = items;
@@ -271,7 +272,7 @@ impl App {
                 self.ledger_tail = tail;
                 self.tick_count = tick;
                 self.ledger_history.push((self.tick_count, count as f64));
-                if self.ledger_history.len() > 150 {
+                if self.ledger_history.len() > 100 {
                     self.ledger_history.remove(0);
                 }
             }
@@ -291,7 +292,7 @@ impl App {
             ])
             .split(size);
 
-        // Header / Tabs
+        // Elegant Title & Tabs
         let titles = vec![" [1] Dashboard ", " [2] Telemetry ", " [3] Gatekeeper (HitL) ", " [4] DLQ Explorer "];
         let tab_index = match self.active_tab {
             ActiveTab::Dashboard => 0,
@@ -301,13 +302,12 @@ impl App {
         };
         
         let tabs = Tabs::new(titles)
-            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Rounded).title(" PRISM SIEM ENGINE "))
-            .highlight_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD).add_modifier(Modifier::REVERSED))
+            .block(Block::default().borders(Borders::ALL).border_type(BorderType::Double).title(" PRISM ADVANCED DATA PLANE ").style(Style::default().fg(Color::Cyan)))
+            .highlight_style(Style::default().fg(Color::Black).bg(Color::Cyan).add_modifier(Modifier::BOLD))
             .select(tab_index)
-            .divider(Span::raw("|"));
+            .divider(Span::raw(" | "));
         f.render_widget(tabs, chunks[0]);
 
-        // Main Content Area
         match self.active_tab {
             ActiveTab::Dashboard => self.draw_dashboard(f, chunks[1]),
             ActiveTab::Telemetry => self.draw_telemetry(f, chunks[1]),
@@ -315,7 +315,6 @@ impl App {
             ActiveTab::DlqViewer => self.draw_dlq(f, chunks[1]),
         }
 
-        // Footer
         let footer = Paragraph::new(Line::from(vec![
             Span::raw(" (Tab) Switch Views | (Q) Quit | (Up/Down) Navigate | (A/Enter) Approve Rule "),
         ])).alignment(Alignment::Center).style(Style::default().fg(Color::DarkGray));
@@ -325,79 +324,104 @@ impl App {
     fn draw_dashboard(&mut self, f: &mut Frame, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(60), Constraint::Percentage(40)])
+            .constraints([Constraint::Length(3), Constraint::Percentage(50), Constraint::Percentage(50)])
             .split(area);
 
-        // Top: EPS Metrics
-        let eps_chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Length(5), Constraint::Min(0)])
-            .split(chunks[0]);
-
-        // Huge EPS Gauge
+        // Slim EPS Gauge
         let eps_gauge = Gauge::default()
-            .block(Block::default().title(" LIVE EPS THROUGHPUT ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .gauge_style(Style::default().fg(Color::Green).bg(Color::Black).add_modifier(Modifier::BOLD))
+            .block(Block::default().title(" INGESTION THROUGHPUT ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .gauge_style(Style::default().fg(Color::LightGreen).bg(Color::DarkGray))
             .percent((self.metrics.eps.min(200000) as u16 / 2000).min(100))
             .label(format!(" {} EPS ", self.metrics.eps));
-        f.render_widget(eps_gauge, eps_chunks[0]);
+        f.render_widget(eps_gauge, chunks[0]);
 
-        let history_vec: Vec<u64> = self.eps_history.iter().copied().collect();
-        let sparkline = Sparkline::default()
+        // Beautiful Line Chart for EPS
+        let eps_ds = vec![
+            Dataset::default()
+                .name("EPS Velocity")
+                .marker(symbols::Marker::Braille)
+                .style(Style::default().fg(Color::Cyan))
+                .graph_type(GraphType::Line)
+                .data(&self.eps_history),
+        ];
+        
+        let max_eps = self.eps_history.iter().map(|(_, y)| *y).fold(0.0, f64::max).max(100.0);
+        let chart = Chart::new(eps_ds)
             .block(Block::default().title(" EVENT VELOCITY ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .data(&history_vec)
-            .style(Style::default().fg(Color::Cyan));
-        f.render_widget(sparkline, eps_chunks[1]);
+            .x_axis(Axis::default().title("Time").bounds([self.tick_count.max(10.0) - 10.0, self.tick_count.max(10.0)]))
+            .y_axis(Axis::default().title("EPS").bounds([0.0, max_eps]).labels(vec![
+                Span::raw("0"),
+                Span::raw(format!("{}", max_eps / 2.0)),
+                Span::raw(format!("{}", max_eps)),
+            ]));
+        f.render_widget(chart, chunks[1]);
 
-        // Bottom: Merkle Ledger
-        let ledger_chunks = Layout::default()
+        let bottom_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
-            .split(chunks[1]);
+            .constraints([Constraint::Percentage(25), Constraint::Percentage(75)])
+            .split(chunks[2]);
 
         let stats = format!(
-            "\nTotal Processed:\n{}\n\nTotal Dropped:\n{}\n\nDLQ Count:\n{}\n\n\nLatest Merkle Root:\n{}",
-            self.metrics.processed, self.metrics.drops, self.metrics.dlq, self.ledger_tail
+            "\n\nTotal Processed: {}\n\nTotal Dropped: {}\n\nDLQ Count: {}\n\nRoot:\n{}",
+            self.metrics.processed, self.metrics.drops, self.metrics.dlq,
+            if self.ledger_tail.len() > 16 { &self.ledger_tail[..16] } else { &self.ledger_tail }
         );
-        
         let stats_widget = Paragraph::new(stats)
             .block(Block::default().title(" SYSTEM STATS ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Magenta)))
             .alignment(Alignment::Center);
-        f.render_widget(stats_widget, ledger_chunks[0]);
+        f.render_widget(stats_widget, bottom_chunks[0]);
 
-        let datasets = vec![
+        let ledger_ds = vec![
             Dataset::default()
-                .name("Prov. Ledger Size")
-                .marker(symbols::Marker::Braille)
+                .name("Ledger Size")
+                .marker(symbols::Marker::Dot)
                 .style(Style::default().fg(Color::Yellow))
-                .graph_type(GraphType::Line)
+                .graph_type(GraphType::Scatter)
                 .data(&self.ledger_history),
         ];
-        let chart = Chart::new(datasets)
+        let max_ledger = self.ledger_history.iter().map(|(_, y)| *y).fold(0.0, f64::max).max(10.0);
+        let ledger_chart = Chart::new(ledger_ds)
             .block(Block::default().title(" IMMUTABLE PROVENANCE LEDGER ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .x_axis(Axis::default().title("Time").bounds([self.tick_count.max(15.0) - 15.0, self.tick_count.max(15.0)]))
-            .y_axis(Axis::default().title("Entries").bounds([0.0, self.ledger_history.last().map(|(_, y)| *y).unwrap_or(100.0).max(10.0)]));
-        f.render_widget(chart, ledger_chunks[1]);
+            .x_axis(Axis::default().bounds([self.tick_count.max(10.0) - 10.0, self.tick_count.max(10.0)]))
+            .y_axis(Axis::default().bounds([0.0, max_ledger]));
+        f.render_widget(ledger_chart, bottom_chunks[1]);
     }
 
     fn draw_telemetry(&mut self, f: &mut Frame, area: Rect) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)])
             .split(area);
             
         let top_chunks = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .constraints([Constraint::Percentage(33), Constraint::Percentage(34), Constraint::Percentage(33)])
             .split(chunks[0]);
             
         // Latency
-        let lat_str = format!(" {} μs ", self.metrics.telemetry.latency_us);
+        let lat_str = format!("\n\n{} μs", self.metrics.telemetry.latency_us);
         let lat_widget = Paragraph::new(lat_str)
-            .block(Block::default().title(" AVG PARSING LATENCY ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .block(Block::default().title(" AVG LATENCY ").borders(Borders::ALL).border_type(BorderType::Rounded))
             .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD))
             .alignment(Alignment::Center);
         f.render_widget(lat_widget, top_chunks[0]);
+        
+        // AI Status (Simulated Check)
+        let ai_running = std::process::Command::new("pgrep").arg("-f").arg("prism-brain").output().map(|o| !o.stdout.is_empty()).unwrap_or(false);
+        let ai_status = if ai_running { "\n\n🟢 ONLINE" } else { "\n\n🔴 OFFLINE" };
+        let ai_widget = Paragraph::new(ai_status)
+            .block(Block::default().title(" AI CONTROL PLANE ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(if ai_running { Color::Green } else { Color::Red }).add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Center);
+        f.render_widget(ai_widget, top_chunks[1]);
+
+        // Drops
+        let drops_str = format!("\n\n{}", self.metrics.drops);
+        let drops_widget = Paragraph::new(drops_str)
+            .block(Block::default().title(" PACKET DROPS ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(if self.metrics.drops > 0 { Color::Red } else { Color::Green }).add_modifier(Modifier::BOLD))
+            .alignment(Alignment::Center);
+        f.render_widget(drops_widget, top_chunks[2]);
         
         // Vendor Breakdown
         let total = (self.metrics.telemetry.fortinet + self.metrics.telemetry.cisco + self.metrics.telemetry.paloalto).max(1);
@@ -406,23 +430,16 @@ impl App {
         let p_pct = (self.metrics.telemetry.paloalto * 100) / total;
         
         let vendor_stats = format!(
-            "\nFortinet: {} ({}%)\nCisco ASA: {} ({}%)\nPalo Alto: {} ({}%)",
+            "\n  Fortinet:    {} ({}%)\n\n  Cisco ASA:   {} ({}%)\n\n  Palo Alto:   {} ({}%)",
             self.metrics.telemetry.fortinet, f_pct,
             self.metrics.telemetry.cisco, c_pct,
             self.metrics.telemetry.paloalto, p_pct
         );
         let vendor_widget = Paragraph::new(vendor_stats)
-            .block(Block::default().title(" LOG SOURCE BREAKDOWN ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .style(Style::default().fg(Color::LightGreen))
+            .block(Block::default().title(" LOG VENDOR BREAKDOWN ").borders(Borders::ALL).border_type(BorderType::Rounded))
+            .style(Style::default().fg(Color::LightGreen).add_modifier(Modifier::BOLD))
             .alignment(Alignment::Left);
-        f.render_widget(vendor_widget, top_chunks[1]);
-        
-        // Some mock detailed chart area for the bottom
-        let chart = Paragraph::new("\n\n(Detailed parsing heatmaps and memory allocations would go here)")
-            .block(Block::default().title(" VRL MEMORY HEAP ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .style(Style::default().fg(Color::DarkGray))
-            .alignment(Alignment::Center);
-        f.render_widget(chart, chunks[1]);
+        f.render_widget(vendor_widget, chunks[1]);
     }
 
     fn draw_gatekeeper(&mut self, f: &mut Frame, area: Rect) {
@@ -439,13 +456,12 @@ impl App {
         }).collect();
         
         let list = List::new(items)
-            .block(Block::default().title(" AI PARSERS AWAITING APPROVAL ").borders(Borders::ALL).border_type(BorderType::Rounded))
-            .highlight_style(Style::default().bg(Color::DarkGray).fg(Color::White).add_modifier(Modifier::BOLD))
+            .block(Block::default().title(" AI PARSERS AWAITING APPROVAL ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::Yellow)))
+            .highlight_style(Style::default().bg(Color::Yellow).fg(Color::Black).add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
         
         f.render_stateful_widget(list, chunks[0], &mut self.hitl_state);
 
-        // Preview Pane
         let preview_text = if let Some(i) = self.hitl_state.selected() {
             if i < self.hitl_rules.len() {
                 if let Ok(content) = std::fs::read_to_string(format!("/tmp/prism/rules/{}", self.hitl_rules[i])) {
@@ -472,10 +488,14 @@ impl App {
         let header = Row::new(header_cells).style(Style::default().bg(Color::DarkGray)).height(1).bottom_margin(1);
         
         let rows: Vec<Row> = self.dlq_items.iter().map(|(ts, err, payload)| {
-            Row::new(vec![Cell::from(ts.as_str()), Cell::from(err.as_str()), Cell::from(payload.as_str())])
+            Row::new(vec![
+                Cell::from(ts.as_str()).style(Style::default().fg(Color::DarkGray)), 
+                Cell::from(err.as_str()).style(Style::default().fg(Color::LightRed)), 
+                Cell::from(payload.as_str()).style(Style::default().fg(Color::White))
+            ])
         }).collect();
 
-        let table = Table::new(rows, [Constraint::Length(25), Constraint::Length(30), Constraint::Min(20)])
+        let table = Table::new(rows, [Constraint::Length(25), Constraint::Length(25), Constraint::Min(20)])
             .header(header)
             .block(Block::default().title(" DEAD LETTER QUEUE (UNKNOWN LOGS) ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::LightRed)))
             .highlight_style(Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD))

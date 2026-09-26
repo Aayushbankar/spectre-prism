@@ -3,6 +3,10 @@
 # Streams actual Fortinet, Cisco, and Palo Alto logs from the dataset directory
 
 PORT=${1:-514}
+echo "Provisioning initial AI parsers to /tmp/prism/rules..."
+mkdir -p /tmp/prism/rules
+cp rules/*.vrl /tmp/prism/rules/
+
 echo "Starting REAL continuous log stream to 127.0.0.1:$PORT... (Press Ctrl+C to stop)"
 
 # Pre-load logs into memory for speed
