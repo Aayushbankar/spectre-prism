@@ -1,5 +1,5 @@
 use reqwest::Client;
-use prism_common::OcsfNetworkActivity;
+use prism_common::OcsfEvent;
 use anyhow::Result;
 
 pub struct HttpSink {
@@ -15,7 +15,7 @@ impl HttpSink {
         }
     }
 
-    pub async fn push_bulk(&self, batch: &[OcsfNetworkActivity]) -> Result<()> {
+    pub async fn push_bulk(&self, batch: &[OcsfEvent]) -> Result<()> {
         let mut ndjson = String::new();
         for item in batch {
             ndjson.push_str("{\"index\":{}}\n");
@@ -41,7 +41,6 @@ impl HttpSink {
                 anyhow::bail!("Bulk push contained errors: {}", body);
             }
         } else {
-            // fallback if it's not valid json but contains errors:true
             if body.contains("\"errors\":true") || body.contains("\"errors\": true") {
                 anyhow::bail!("Bulk push contained errors: {}", body);
             }

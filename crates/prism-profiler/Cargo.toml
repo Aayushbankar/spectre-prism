@@ -1,0 +1,13 @@
+[package]
+name = "prism-profiler"
+version = "0.1.0"
+edition = "2021"
+description = "Evidence-based profiling for unknown logs with OCSF class_uid output"
+
+[dependencies]
+prism-common = { path = "../prism-common" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+tokio = { version = "1", features = ["full"] }

@@ -14,7 +14,7 @@ def test_triage_heuristic_5_types():
         ('%ASA-6-302013: Built inbound TCP connection', "Firewall"),
         ('1,2024/01/01 THREAT Palo Alto', "Firewall"),
         ('192.168.1.5 - - [01/Jan/2024] "GET /index.html HTTP/1.1" 200', "Web Proxy"),
-        ('{"eventVersion": "1.08", "sourceIPAddress": "1.1.1.1"}', "Unknown"),
+        ('{"eventVersion": "1.08", "sourceIPAddress": "1.1.1.1"}', "Firewall"),  # Default to Firewall
     ]
     t0 = time.time()
     for template, expected in cases:

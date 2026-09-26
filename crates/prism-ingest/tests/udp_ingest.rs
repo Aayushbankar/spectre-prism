@@ -164,7 +164,7 @@ async fn test_capacity_invariance_100k() {
 
     let result = timeout(Duration::from_secs(10), async {
         let mut count = 0;
-        while let Ok(_) = data_rx.recv_async().await {
+        while data_rx.recv_async().await.is_ok() {
             let _ = prov_rx.recv_async().await.unwrap();
             count += 1;
             if count == 100_000 {
@@ -263,7 +263,7 @@ async fn test_1m_burst_ingest() {
 
     let result = timeout(Duration::from_secs(15), async {
         let mut count = 0;
-        while let Ok(_) = data_rx.recv_async().await {
+        while data_rx.recv_async().await.is_ok() {
             let _ = prov_rx.recv_async().await.unwrap();
             count += 1;
             if count == 1_000_000 {

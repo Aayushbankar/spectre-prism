@@ -29,6 +29,7 @@ trap cleanup EXIT
 
 # Ensure directories exist
 mkdir -p /tmp/prism/rules
+mkdir -p /tmp/prism/pending_rules
 mkdir -p /tmp/prism/dlq
 
 # Wait for PRISM to boot up
@@ -69,12 +70,18 @@ print(f"[AI] Generated VRL:\n{vrl_code}")
 
 gatekeeper = Gatekeeper()
 gatekeeper.approve_and_deploy(device_type, vrl_code, "nginx_sig", log)
-print(f"[Gatekeeper] Validated via dry-run and deployed to /tmp/prism/rules/")
+print(f"[Gatekeeper] Validated via dry-run and deployed to /tmp/prism/pending_rules/")
 EOF
 
 python3 /tmp/run_ai.py
 
+echo "[*] NOTE: User must open the TUI and press 'A' to approve. Simulating approval for demo..."
+mv /tmp/prism/pending_rules/*.vrl /tmp/prism/rules/ 2>/dev/null || true
+mv /tmp/prism/pending_rules/*.yaml /tmp/prism/rules/ 2>/dev/null || true
+
 echo "[*] Waiting for PRISM notify thread to Hot-Reload the rules..."
+echo "[*] Since HitL is enabled, we will simulate TUI approval by moving the rule..."
+mv /tmp/prism/pending_rules/*.vrl /tmp/prism/rules/ 2>/dev/null || true
 sleep 2
 
 echo "[*] Sending the SAME UNKNOWN log format again..."

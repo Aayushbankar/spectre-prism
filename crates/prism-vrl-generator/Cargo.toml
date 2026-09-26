@@ -1,0 +1,17 @@
+[package]
+name = "prism-vrl-generator"
+version = "0.1.0"
+edition = "2021"
+description = "VRL script generator with heuristic, fine-tuned, and LLM modes"
+
+[dependencies]
+prism-common = { path = "../prism-common" }
+prism-drain = { path = "../prism-drain" }
+prism-profiler = { path = "../prism-profiler" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+vrl = "0.35.0"
