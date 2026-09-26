@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(report.exact_count, 2);
         // Approx: activity_id (1 is not in log as exact, well "1" is part of 134 or 10.10, but let's see. wait raw.contains("1") is true! So it will be Derived. Let's make it a string that's not there).
         // Actually activity_id=1, string "1" might be found.
-        assert!(report.derived_count > 0 || report.approximate_count >= 0);
+        assert!(report.derived_count > 0 || report.approximate_count > 0);
         assert!(report.unmapped_count > 0); // date, time, logid, action
     }
 

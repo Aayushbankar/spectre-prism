@@ -1,0 +1,337 @@
+import type { KPIMetric, OCSFEvent, SankeyNode, SankeyLink, GeoThreatPoint } from '../types';
+
+export const INITIAL_SUMMARY = {
+  totalRequests: 2669410,
+  uniqueVisitors: 1420,
+  countriesReached: 140,
+  dataTransferredMB: 14.59,
+  avgPayloadBytes: 5732,
+  largestResponseBytes: 19742,
+  succeededRequests: 2464120,
+  failedRequests: 205290,
+  serverErrors: 87140,
+  notFoundErrors: 118150,
+  availabilityPct: 96.7,
+  successPct: 92.3,
+  notFoundPct: 4.4,
+  errorBudgetPct: 92.3,
+  healthScore: 94,
+  healthStatus: 'GOOD',
+};
+
+export const KPI_METRICS: KPIMetric[] = [
+  {
+    id: 'sessions',
+    label: 'Ingest Throughput (EPS)',
+    value: '85,620',
+    change: -12,
+    isPositiveGood: true,
+    history: [98, 92, 95, 89, 91, 84, 86],
+    subtitle: 'events / second across 12 worker threads',
+    accentColor: '#aa3bff',
+  },
+  {
+    id: 'users',
+    label: 'Active Sensor Nodes',
+    value: '523',
+    change: 23,
+    isPositiveGood: true,
+    history: [410, 425, 460, 470, 490, 510, 523],
+    subtitle: 'firewalls & syslog collectors online',
+    accentColor: '#38bdf8',
+  },
+  {
+    id: 'time_spent',
+    label: 'Parse Latency (p99)',
+    value: '9.56 µs',
+    change: 8,
+    isPositiveGood: false,
+    history: [7.2, 8.1, 7.8, 8.9, 8.4, 9.1, 9.56],
+    subtitle: 'zero-allocation VRL runtime',
+    accentColor: '#2dd4bf',
+  },
+];
+
+export const DEVICE_BREAKDOWN = {
+  total: 545,
+  items: [
+    { label: 'UDP Syslog', count: 305, percentage: 49, color: '#f97316' },
+    { label: 'TCP / TLS', count: 158, percentage: 36, color: '#38bdf8' },
+    { label: 'NetFlow v9', count: 65, percentage: 15, color: '#8b5cf6' },
+  ],
+};
+
+export const REALTIME_BARS = [
+  { label: 'Online Ingest Chunks', current: 545, max: 685, color: '#38bdf8' },
+  { label: 'AI Drain3 Mining Trees', current: 421, max: 568, color: '#8b5cf6' },
+  { label: 'VRL Active Transforms', current: 984, max: 1256, color: '#2dd4bf' },
+  { label: 'DLQ Quarantined Events', current: 134, max: 287, color: '#ec4899' },
+];
+
+export const SITE_TRAFFIC_SERIES = [
+  { month: 'Jan', newVisitors: 280, returning: 190 },
+  { month: 'Feb', newVisitors: 350, returning: 240 },
+  { month: 'Mar', newVisitors: 410, returning: 320 },
+  { month: 'Apr', newVisitors: 380, returning: 290 },
+  { month: 'May', newVisitors: 490, returning: 410 },
+  { month: 'Jun', newVisitors: 560, returning: 480 },
+  { month: 'Jul', newVisitors: 620, returning: 530 },
+  { month: 'Aug', newVisitors: 680, returning: 610, peak: true },
+  { month: 'Sep', newVisitors: 590, returning: 510 },
+  { month: 'Oct', newVisitors: 640, returning: 560 },
+  { month: 'Nov', newVisitors: 710, returning: 630 },
+  { month: 'Dec', newVisitors: 750, returning: 690 },
+];
+
+export const VENDOR_TRAFFIC_DONUT = {
+  total: 1578,
+  items: [
+    { label: 'Palo Alto PA-5250', count: 710, percentage: 45, color: '#ef4444' },
+    { label: 'Fortinet FortiGate', count: 316, percentage: 20, color: '#f97316' },
+    { label: 'Cisco ASA 5585', count: 237, percentage: 15, color: '#eab308' },
+    { label: 'AWS VPC Flow Logs', count: 174, percentage: 11, color: '#3b82f6' },
+    { label: 'Suricata IDS / EDR', count: 142, percentage: 9, color: '#06b6d4' },
+  ],
+};
+
+export const TIME_ON_SITE_BARS = [
+  { day: '30 Jan', value: 4.8 },
+  { day: '31 Jan', value: 5.6 },
+  { day: '1 Feb', value: 7.2 },
+  { day: '2 Feb', value: 6.4 },
+  { day: '3 Feb', value: 8.5 },
+  { day: '4 Feb', value: 9.1 },
+  { day: '5 Feb', value: 7.8 },
+  { day: '6 Feb', value: 10.3 },
+  { day: '7 Feb', value: 12.51, isPeak: true },
+  { day: '8 Feb', value: 8.9 },
+  { day: '9 Feb', value: 9.7 },
+  { day: '10 Feb', value: 11.2 },
+  { day: '11 Feb', value: 10.8 },
+  { day: '12 Feb', value: 9.4 },
+];
+
+export const TOP_PAGES_RANKED = [
+  { path: 'firewall.paloalto.traffic_flow', count: 59085, percentage: 96, color: '#ef4444' },
+  { path: 'syslog.fortinet.utm_antivirus', count: 58325, percentage: 94, color: '#f97316' },
+  { path: 'network.cisco_asa.acl_drop', count: 51187, percentage: 84, color: '#eab308' },
+  { path: 'ocsf.class_4001.http_activity', count: 49258, percentage: 80, color: '#3b82f6' },
+  { path: 'vault.parquet.batch_audit_log', count: 38567, percentage: 62, color: '#8b5cf6' },
+  { path: 'hitl.gatekeeper.pending_queue', count: 28845, percentage: 46, color: '#ec4899' },
+  { path: 'merkle.tree.root_accumulator', count: 15353, percentage: 25, color: '#10b981' },
+  { path: 'dlq.unparsed.raw_payload_bin', count: 7586, percentage: 12, color: '#f43f5e' },
+  { path: 'ai.laya_modernbert.classifier', count: 4120, percentage: 7, color: '#6366f1' },
+];
+
+// INGESTION & OCSF FLOW TOPOLOGY DATA
+export const SANKEY_NODES: SankeyNode[] = [
+  // Col 0: Destination / Origin Sources
+  { id: 'CN', label: 'CN · China', col: 0, value: 2621, color: '#ef4444', flag: '🇨🇳' },
+  { id: 'IN', label: 'IN · India', col: 0, value: 2323, color: '#10b981', flag: '🇮🇳' },
+  { id: 'US', label: 'US · United States', col: 0, value: 1120, color: '#3b82f6', flag: '🇺🇸' },
+  { id: 'ID', label: 'ID · Indonesia', col: 0, value: 487, color: '#f59e0b', flag: '🇮🇩' },
+  { id: 'BR', label: 'BR · Brazil', col: 0, value: 411, color: '#84cc16', flag: '🇧🇷' },
+  { id: 'PK', label: 'PK · Pakistan', col: 0, value: 318, color: '#14b8a6', flag: '🇵🇰' },
+  { id: 'BD', label: 'BD · Bangladesh', col: 0, value: 315, color: '#06b6d4', flag: '🇧🇩' },
+  { id: 'NG', label: 'NG · Nigeria', col: 0, value: 304, color: '#a855f7', flag: '🇳🇬' },
+  { id: 'Other', label: 'Other Regions (132)', col: 0, value: 6175, color: '#64748b', flag: '🌐' },
+
+  // Col 1: Processing Engine / Architecture Plane
+  { id: 'Engine_PA', label: 'Palo Alto VRL Pipe', col: 1, value: 3485, color: '#0ea5e9' },
+  { id: 'Engine_Forti', label: 'FortiGate Parser', col: 1, value: 3425, color: '#0284c7' },
+  { id: 'Engine_Cisco', label: 'Cisco ASA Normalizer', col: 1, value: 2814, color: '#0369a1' },
+  { id: 'Engine_Drain', label: 'Drain3 AI Miner', col: 1, value: 2313, color: '#075985' },
+  { id: 'Engine_Merkle', label: 'Merkle Vault 65B', col: 1, value: 2037, color: '#0c4a6e' },
+
+  // Col 2: Ingestion & Compliance Status
+  { id: 'Status_200', label: '200 OK · OCSF Class 4001', col: 2, value: 12832, color: '#10b981' },
+  { id: 'Status_404', label: '404 Dropped / Blocked', col: 2, value: 801, color: '#f59e0b' },
+  { id: 'Status_503', label: '503 DLQ / HitL Triage', col: 2, value: 441, color: '#f43f5e' },
+];
+
+export const SANKEY_LINKS: SankeyLink[] = [
+  // From CN
+  { source: 'CN', target: 'Engine_PA', value: 850, color: 'rgba(14, 165, 233, 0.45)' },
+  { source: 'CN', target: 'Engine_Forti', value: 620, color: 'rgba(2, 132, 199, 0.45)' },
+  { source: 'CN', target: 'Engine_Cisco', value: 500, color: 'rgba(3, 105, 161, 0.45)' },
+  { source: 'CN', target: 'Engine_Drain', value: 400, color: 'rgba(7, 89, 133, 0.45)' },
+  { source: 'CN', target: 'Engine_Merkle', value: 251, color: 'rgba(12, 74, 110, 0.45)' },
+
+  // From IN
+  { source: 'IN', target: 'Engine_PA', value: 720, color: 'rgba(14, 165, 233, 0.45)' },
+  { source: 'IN', target: 'Engine_Forti', value: 780, color: 'rgba(2, 132, 199, 0.45)' },
+  { source: 'IN', target: 'Engine_Cisco', value: 450, color: 'rgba(3, 105, 161, 0.45)' },
+  { source: 'IN', target: 'Engine_Drain', value: 220, color: 'rgba(7, 89, 133, 0.45)' },
+  { source: 'IN', target: 'Engine_Merkle', value: 153, color: 'rgba(12, 74, 110, 0.45)' },
+
+  // From US
+  { source: 'US', target: 'Engine_PA', value: 380, color: 'rgba(14, 165, 233, 0.45)' },
+  { source: 'US', target: 'Engine_Forti', value: 320, color: 'rgba(2, 132, 199, 0.45)' },
+  { source: 'US', target: 'Engine_Cisco', value: 240, color: 'rgba(3, 105, 161, 0.45)' },
+  { source: 'US', target: 'Engine_Drain', value: 110, color: 'rgba(7, 89, 133, 0.45)' },
+  { source: 'US', target: 'Engine_Merkle', value: 70, color: 'rgba(12, 74, 110, 0.45)' },
+
+  // From Other
+  { source: 'Other', target: 'Engine_PA', value: 1535, color: 'rgba(14, 165, 233, 0.45)' },
+  { source: 'Other', target: 'Engine_Forti', value: 1705, color: 'rgba(2, 132, 199, 0.45)' },
+  { source: 'Other', target: 'Engine_Cisco', value: 1624, color: 'rgba(3, 105, 161, 0.45)' },
+  { source: 'Other', target: 'Engine_Drain', value: 1583, color: 'rgba(7, 89, 133, 0.45)' },
+  { source: 'Other', target: 'Engine_Merkle', value: 1563, color: 'rgba(12, 74, 110, 0.45)' },
+
+  // From Engines to Status Egress
+  { source: 'Engine_PA', target: 'Status_200', value: 3180, color: 'rgba(16, 185, 129, 0.5)' },
+  { source: 'Engine_PA', target: 'Status_404', value: 215, color: 'rgba(245, 158, 11, 0.5)' },
+  { source: 'Engine_PA', target: 'Status_503', value: 90, color: 'rgba(244, 63, 94, 0.5)' },
+
+  { source: 'Engine_Forti', target: 'Status_200', value: 3150, color: 'rgba(16, 185, 129, 0.5)' },
+  { source: 'Engine_Forti', target: 'Status_404', value: 190, color: 'rgba(245, 158, 11, 0.5)' },
+  { source: 'Engine_Forti', target: 'Status_503', value: 85, color: 'rgba(244, 63, 94, 0.5)' },
+
+  { source: 'Engine_Cisco', target: 'Status_200', value: 2580, color: 'rgba(16, 185, 129, 0.5)' },
+  { source: 'Engine_Cisco', target: 'Status_404', value: 154, color: 'rgba(245, 158, 11, 0.5)' },
+  { source: 'Engine_Cisco', target: 'Status_503', value: 80, color: 'rgba(244, 63, 94, 0.5)' },
+
+  { source: 'Engine_Drain', target: 'Status_200', value: 2050, color: 'rgba(16, 185, 129, 0.5)' },
+  { source: 'Engine_Drain', target: 'Status_404', value: 143, color: 'rgba(245, 158, 11, 0.5)' },
+  { source: 'Engine_Drain', target: 'Status_503', value: 120, color: 'rgba(244, 63, 94, 0.5)' },
+
+  { source: 'Engine_Merkle', target: 'Status_200', value: 1872, color: 'rgba(16, 185, 129, 0.5)' },
+  { source: 'Engine_Merkle', target: 'Status_404', value: 99, color: 'rgba(245, 158, 11, 0.5)' },
+  { source: 'Engine_Merkle', target: 'Status_503', value: 66, color: 'rgba(244, 63, 94, 0.5)' },
+];
+
+export const GEO_THREAT_POINTS: GeoThreatPoint[] = [
+  { id: 'in', country: 'India', countryCode: 'IN', x: 67, y: 46, threatCount: 2323, severity: 'Medium', recentTarget: '10.0.5.50 (Core Gateway)' },
+  { id: 'us', country: 'United States', countryCode: 'US', x: 22, y: 35, threatCount: 1120, severity: 'High', recentTarget: '192.168.1.1 (Vault Node)' },
+  { id: 'cn', country: 'China', countryCode: 'CN', x: 74, y: 36, threatCount: 2621, severity: 'Critical', recentTarget: '10.0.2.14 (VRL Router)' },
+  { id: 'ru', country: 'Russia', countryCode: 'RU', x: 68, y: 22, threatCount: 1845, severity: 'Critical', recentTarget: '172.16.0.4 (Elastic Exporter)' },
+  { id: 'de', country: 'Germany', countryCode: 'DE', x: 50, y: 28, threatCount: 654, severity: 'Low', recentTarget: '10.0.1.1 (TUI Gateway)' },
+  { id: 'br', country: 'Brazil', countryCode: 'BR', x: 33, y: 68, threatCount: 411, severity: 'Medium', recentTarget: '10.0.5.21 (Drain3 Node)' },
+  { id: 'au', country: 'Australia', countryCode: 'AU', x: 84, y: 74, threatCount: 298, severity: 'Low', recentTarget: '192.168.10.8 (Merkle Root)' },
+  { id: 'id', country: 'Indonesia', countryCode: 'ID', x: 78, y: 56, threatCount: 487, severity: 'Medium', recentTarget: '10.0.3.9 (OCSF Dispatcher)' },
+];
+
+export const SAMPLE_FORENSIC_EVENTS: OCSFEvent[] = [
+  {
+    id: 'evt-901',
+    time: 1727271900,
+    formattedTime: '19:05:00 UTC',
+    category_uid: 4,
+    class_uid: 4001,
+    activity_id: 2,
+    activity_label: 'Deny',
+    src_ip: '203.0.113.45',
+    src_country: 'China',
+    src_country_code: 'CN',
+    dst_ip: '10.0.5.50',
+    dst_port: 443,
+    protocol: 'TCP',
+    vendor: 'Palo Alto PA-5250',
+    severity: 'Critical',
+    severity_id: 6,
+    threat_type: 'Brute Force SSH / CVE-2024-3400 exploit',
+    bytes: 14200,
+    provenance_hash: '8a9b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
+    vault_uri: '/vault/batch-942.parquet',
+    merkle_leaf_index: 492,
+    vrl_rule: 'rules/paloalto.vrl',
+    drain_template: 'Failed password for invalid user <*> from <IP> port <NUM> ssh2',
+  },
+  {
+    id: 'evt-902',
+    time: 1727271901,
+    formattedTime: '19:05:01 UTC',
+    category_uid: 4,
+    class_uid: 4001,
+    activity_id: 1,
+    activity_label: 'Allow',
+    src_ip: '49.207.181.12',
+    src_country: 'India',
+    src_country_code: 'IN',
+    dst_ip: '10.0.2.14',
+    dst_port: 8443,
+    protocol: 'TLS',
+    vendor: 'Fortinet FortiGate',
+    severity: 'Low',
+    severity_id: 2,
+    threat_type: 'Legitimate Authorized VPN Ingress',
+    bytes: 38450,
+    provenance_hash: '3f2e1d0c9b8a7f6e5d4c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e',
+    vault_uri: '/vault/batch-942.parquet',
+    merkle_leaf_index: 493,
+    vrl_rule: 'rules/fortinet.vrl',
+  },
+  {
+    id: 'evt-903',
+    time: 1727271902,
+    formattedTime: '19:05:02 UTC',
+    category_uid: 4,
+    class_uid: 4001,
+    activity_id: 2,
+    activity_label: 'Deny',
+    src_ip: '198.51.100.89',
+    src_country: 'Russia',
+    src_country_code: 'RU',
+    dst_ip: '10.0.5.21',
+    dst_port: 53,
+    protocol: 'UDP',
+    vendor: 'Cisco ASA 5585',
+    severity: 'High',
+    severity_id: 5,
+    threat_type: 'DNS Amplification / Tunneling Outbound',
+    bytes: 65400,
+    provenance_hash: 'c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b8a9b7c6d5e4f3a2b1c0d9e8f7a6b5',
+    vault_uri: '/vault/batch-942.parquet',
+    merkle_leaf_index: 494,
+    vrl_rule: 'rules/cisco_asa.vrl',
+    drain_template: 'Teardown UDP connection <*> for inside:<IP>/<NUM> to outside:<IP>/<NUM>',
+  },
+  {
+    id: 'evt-904',
+    time: 1727271903,
+    formattedTime: '19:05:03 UTC',
+    category_uid: 4,
+    class_uid: 4001,
+    activity_id: 3,
+    activity_label: 'Reset',
+    src_ip: '185.220.101.5',
+    src_country: 'Germany',
+    src_country_code: 'DE',
+    dst_ip: '10.0.1.1',
+    dst_port: 80,
+    protocol: 'TCP',
+    vendor: 'Suricata IDS',
+    severity: 'High',
+    severity_id: 4,
+    threat_type: 'Tor Exit Node Port Sweep',
+    bytes: 1200,
+    provenance_hash: '9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b',
+    vault_uri: '/vault/batch-943.parquet',
+    merkle_leaf_index: 495,
+    vrl_rule: 'rules/paloalto.vrl',
+  },
+  {
+    id: 'evt-905',
+    time: 1727271904,
+    formattedTime: '19:05:04 UTC',
+    category_uid: 4,
+    class_uid: 4001,
+    activity_id: 1,
+    activity_label: 'Allow',
+    src_ip: '142.250.190.46',
+    src_country: 'United States',
+    src_country_code: 'US',
+    dst_ip: '10.0.3.9',
+    dst_port: 443,
+    protocol: 'TLS',
+    vendor: 'AWS VPC Flow Logs',
+    severity: 'Info',
+    severity_id: 1,
+    threat_type: 'Normal Ingress Cloud Sync',
+    bytes: 18240,
+    provenance_hash: '1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
+    vault_uri: '/vault/batch-943.parquet',
+    merkle_leaf_index: 496,
+    vrl_rule: 'rules/fortinet.vrl',
+  },
+];

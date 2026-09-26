@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use thiserror::Error;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Error, Debug)]
 pub enum DrainError {
@@ -166,7 +167,15 @@ impl Drain {
 
     pub async fn enrich_with_laya(&mut self) -> Result<Vec<EnrichedTemplate>, DrainError> {
         let templates = self.ranked_templates();
-        enrich_with_laya(templates).await
+        let enriched = enrich_with_laya(&templates).await?;
+        for e in &enriched {
+            if let Some(template) = self.clusters.get_mut(&e.template_id) {
+                template.class_uid_hint = Some(e.class_uid);
+                template.vendor_hint = Some(e.vendor.clone());
+                template.detector_terms = e.detector_terms.clone();
+            }
+        }
+        Ok(enriched)
     }
 }
 
@@ -197,43 +206,82 @@ pub fn specificity(template: &Template) -> f64 {
     literal as f64 / template.pattern.len() as f64
 }
 
-async fn enrich_with_laya(templates: Vec<Template>) -> Result<Vec<EnrichedTemplate>, DrainError> {
-    let input = serde_json::to_string(&templates).map_err(|e| DrainError::LayaEnrichment(e.to_string()))?;
+fn find_laya_script() -> std::path::PathBuf {
+    if let Ok(base) = std::env::var("PRISM_BASE_DIR") {
+        let p = std::path::Path::new(&base).join("prism-brain/laya_enricher.py");
+        if p.exists() {
+            return p;
+        }
+    }
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let manifest_candidates = [
+        manifest.join("../../prism-brain/laya_enricher.py"),
+        manifest.join("../prism-brain/laya_enricher.py"),
+        manifest.join("prism-brain/laya_enricher.py"),
+    ];
+    for p in &manifest_candidates {
+        if p.exists() {
+            return p.clone();
+        }
+    }
+    let candidates = [
+        "prism-brain/laya_enricher.py",
+        "../../prism-brain/laya_enricher.py",
+        "../prism-brain/laya_enricher.py",
+        "/mnt/work/projects/sih/prism/prism-brain/laya_enricher.py",
+    ];
+    for c in &candidates {
+        let p = std::path::PathBuf::from(c);
+        if p.exists() {
+            return p;
+        }
+    }
+    std::path::PathBuf::from("prism-brain/laya_enricher.py")
+}
 
-    let output = tokio::process::Command::new("python3")
-        .arg("prism-brain/laya_enricher.py")
+pub async fn enrich_with_laya(templates: &[Template]) -> Result<Vec<EnrichedTemplate>, DrainError> {
+    if templates.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let input = serde_json::to_string(templates).map_err(|e| DrainError::LayaEnrichment(e.to_string()))?;
+    let python = std::env::var("PYTHON").unwrap_or_else(|_| "python3".to_string());
+    let script = find_laya_script();
+
+    let mut child = tokio::process::Command::new(python)
+        .arg(script)
         .arg("--input")
         .arg("-")
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
         .spawn()
-        .map_err(|e| DrainError::LayaEnrichment(e.to_string()))?
-        .stdin
-        .write_all(input.as_bytes())
-        .await
-        .map_err(|e| DrainError::LayaEnrichment(e.to_string()))?
-        .wait_with_output()
-        .await
-        .map_err(|e| DrainError::LayaEnrichment(e.to_string()))?;
+        .map_err(|e| DrainError::LayaEnrichment(format!("Failed to spawn Python process: {}", e)))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(input.as_bytes()).await
+            .map_err(|e| DrainError::LayaEnrichment(format!("Failed to write to Python stdin: {}", e)))?;
+        drop(stdin);
+    }
+
+    let output = child.wait_with_output().await
+        .map_err(|e| DrainError::LayaEnrichment(format!("Failed to wait for Python process: {}", e)))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(DrainError::LayaEnrichment(stderr.to_string()));
+        return Err(DrainError::LayaEnrichment(format!("Laya script exited with error: {}", stderr)));
     }
 
     let enriched: Vec<EnrichedTemplate> = serde_json::from_slice(&output.stdout)
-        .map_err(|e| DrainError::LayaEnrichment(e.to_string()))?;
-
-    for enriched in &enriched {
-        if let Some(template) = templates.iter_mut().find(|t| t.id == enriched.template_id) {
-            template.class_uid_hint = Some(enriched.class_uid);
-            template.vendor_hint = Some(enriched.vendor.clone());
-            template.detector_terms = enriched.detector_terms.clone();
-        }
-    }
+        .map_err(|e| {
+            let out_str = String::from_utf8_lossy(&output.stdout);
+            let err_str = String::from_utf8_lossy(&output.stderr);
+            DrainError::LayaEnrichment(format!("Failed to parse Laya output JSON: {} | stdout: '{}' | stderr: '{}'", e, out_str, err_str))
+        })?;
 
     Ok(enriched)
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -285,5 +333,28 @@ mod tests {
         d.process("kernel: INBOUND TCP SRC=5.6.7.8 DPT=445");
         let spec = specificity(&d.ranked_templates()[0]);
         assert_eq!(spec, 0.8);
+    }
+
+    #[tokio::test]
+    async fn enrich_with_laya_updates_clusters() {
+        let mut d = Drain::new();
+        d.process("Feb 25 12:11:24 bridge kernel: INBOUND TCP SRC=220.228.136.38 DST=11.11.79.83");
+        d.process("Feb 25 12:11:27 bridge kernel: INBOUND TCP SRC=220.228.136.38 DST=11.11.79.83");
+        let enriched = d.enrich_with_laya().await.expect("Laya enrichment should succeed");
+        assert_eq!(enriched.len(), 1);
+        assert_eq!(enriched[0].class_uid, 4001);
+        assert_eq!(enriched[0].category_uid, 4);
+        assert_eq!(enriched[0].vendor, "linux");
+        assert!(enriched[0].confidence > 0.0);
+        let top = &d.ranked_templates()[0];
+        assert_eq!(top.class_uid_hint, Some(4001));
+        assert_eq!(top.vendor_hint.as_deref(), Some("linux"));
+    }
+
+    #[tokio::test]
+    async fn enrich_with_laya_empty_returns_empty() {
+        let mut d = Drain::new();
+        let enriched = d.enrich_with_laya().await.expect("Empty drain should enrich cleanly");
+        assert!(enriched.is_empty());
     }
 }

@@ -2,6 +2,8 @@
 members = [
     "crates/prism-common", "crates/prism-core",
     "crates/prism-ingest", "crates/prism-provenance", "crates/prism-tui",
-    "crates/prism-bin"
+    "crates/prism-bin",
+    "crates/prism-drain", "crates/prism-profiler", "crates/prism-vrl-generator",
+    "crates/prism-pack-spec", "crates/prism-scorer", "crates/prism-merkle"
 ]
 resolver = "2"

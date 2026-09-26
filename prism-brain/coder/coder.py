@@ -263,27 +263,62 @@ Return ONLY the VRL code above adapted for the log."""
         category_uid = self._get_category_uid(device_type)
         type_uid = self._get_type_uid(device_type)
         
-        # Don't use parse_syslog for any type - use regex directly for flexibility
-        base = f'''.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
-.class_uid = {class_uid}
-.category_uid = {category_uid}
-.type_uid = {type_uid}
-.src_endpoint.ip = .ip
-.dst_endpoint.ip = .ip'''
+        lines = [
+            f".class_uid = {class_uid}",
+            f".category_uid = {category_uid}",
+            f".type_uid = {type_uid}",
+            "m_src, err = parse_regex(string!(.message), r'SRC=(?P<src>\\d+\\.\\d+\\.\\d+\\.\\d+)')",
+            "if err == null {",
+            "  .src_endpoint.ip = m_src.src",
+            "}",
+            "m_dst, err = parse_regex(string!(.message), r'DST=(?P<dst>\\d+\\.\\d+\\.\\d+\\.\\d+)')",
+            "if err == null {",
+            "  .dst_endpoint.ip = m_dst.dst",
+            "}",
+            "m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')",
+            "if err == null {",
+            "  .ip = m_ip.ip",
+            "  if .src_endpoint.ip == null {",
+            "    .src_endpoint.ip = m_ip.ip",
+            "  }",
+            "  if .dst_endpoint.ip == null {",
+            "    .dst_endpoint.ip = m_ip.ip",
+            "  }",
+            "}",
+        ]
         
         if device_type in ["Authentication", "Firewall"]:
-            base += '\n.user.name = parse_regex!(string!(.message), r\'user[=:]"?(?P<user>[^\\s"]+)\').user'
+            lines.extend([
+                "m_user, err = parse_regex(string!(.message), r'user[=:]\"?(?P<user>[^\\s\"]+)')",
+                "if err == null {",
+                "  .user.name = m_user.user",
+                "}"
+            ])
         elif device_type in ["Web Activity", "Web Proxy"]:
-            base += '''\n.url = parse_regex!(string!(.message), r'(?P<url>https?://[^\\s]+)').url
-.method = parse_regex!(string!(.message), r'(?P<method>GET|POST|PUT|DELETE|HEAD)').method
-.status = parse_regex!(string!(.message), r'(?P<status>\\d{3})').status
-.http.request.method = .method
-.http.request.url = .url
-.http.response.status_code = .status'''
+            lines.extend([
+                "m_url, err = parse_regex(string!(.message), r'(?P<url>https?://[^\\s]+)')",
+                "if err == null {",
+                "  .http.request.url = m_url.url",
+                "}",
+                "m_method, err = parse_regex(string!(.message), r'(?P<method>GET|POST|PUT|DELETE|HEAD)')",
+                "if err == null {",
+                "  .http.request.method = m_method.method",
+                "}",
+                "m_status, err = parse_regex(string!(.message), r'(?P<status>\\d{3})')",
+                "if err == null {",
+                "  .http.response.status_code = to_int!(m_status.status)",
+                "}"
+            ])
         elif device_type == "File Activity":
-            base += '''\n.file_name = parse_regex!(string!(.message), r'(?P<file>[\\w\\-. ]+\\.(exe|dll|pdf|docx?|xlsx?))').file
-.file_path = parse_regex!(string!(.message), r'(?P<path>[A-Za-z]:\\\\[^\\s]+|/[^\\s]+)').path
-.file.name = .file_name
-.file.path = .file_path'''
+            lines.extend([
+                "m_file, err = parse_regex(string!(.message), r'(?P<file>[\\w\\-. ]+\\.(?:exe|dll|pdf|docx?|xlsx?))')",
+                "if err == null {",
+                "  .file.name = m_file.file",
+                "}",
+                "m_path, err = parse_regex(string!(.message), r'(?P<path>[A-Za-z]:\\\\[^\\s]+|/[^\\s]+)')",
+                "if err == null {",
+                "  .file.path = m_path.path",
+                "}"
+            ])
             
-        return base
+        return "\n".join(lines)

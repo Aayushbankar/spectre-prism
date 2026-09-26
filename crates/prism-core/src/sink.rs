@@ -1,5 +1,5 @@
 use reqwest::Client;
-use prism_common::{OcsfEvent, OcsfNetworkActivity};
+use prism_common::OcsfEvent;
 use anyhow::Result;
 
 pub struct HttpSink {

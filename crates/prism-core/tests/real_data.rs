@@ -77,7 +77,7 @@ async fn test_real_data_samples() {
 
     for sample in samples {
         let path = get_data_dir().join(sample);
-        let content = fs::read_to_string(&path).expect(&format!("Could not read {:?}", path));
+        let content = fs::read_to_string(&path).unwrap_or_else(|_| panic!("Could not read {:?}", path));
         for line in content.lines() {
             if line.trim().is_empty() { continue; }
             let vendor = HeuristicRouter::route(line.as_bytes());

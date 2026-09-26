@@ -90,6 +90,12 @@ pub struct App {
     pub show_help: bool,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         Self {
@@ -135,11 +141,10 @@ impl App {
                 let _ = tx_poll.send(Action::Render);
                 
                 // Read metrics
-                if let Ok(content) = fs::read_to_string("/tmp/prism_metrics.json") {
-                    if let Ok(metrics) = serde_json::from_str::<MetricsData>(&content) {
+                if let Ok(content) = fs::read_to_string("/tmp/prism_metrics.json")
+                    && let Ok(metrics) = serde_json::from_str::<MetricsData>(&content) {
                         let _ = tx_poll.send(Action::UpdateMetrics(metrics));
                     }
-                }
                 
                 // Read Gatekeeper rules from metadata
                 if let Ok(rules) = Self::read_rule_metadata() {
@@ -154,19 +159,16 @@ impl App {
                     let mut latest_time = std::time::SystemTime::UNIX_EPOCH;
                     for entry in dir.filter_map(Result::ok) {
                         let name = entry.file_name().to_string_lossy().to_string();
-                        if name.starts_with("dlq_") && name.ends_with(".log") {
-                            if let Ok(meta) = entry.metadata() {
-                                if let Ok(modified) = meta.modified() {
-                                    if modified > latest_time {
+                        if name.starts_with("dlq_") && name.ends_with(".log")
+                            && let Ok(meta) = entry.metadata()
+                                && let Ok(modified) = meta.modified()
+                                    && modified > latest_time {
                                         latest_time = modified;
                                         latest_dlq = Some(entry.path());
                                     }
-                                }
-                            }
-                        }
                     }
-                    if let Some(path) = latest_dlq {
-                        if let Ok(content) = fs::read_to_string(&path) {
+                    if let Some(path) = latest_dlq
+                        && let Ok(content) = fs::read_to_string(&path) {
                             for line in content.lines().rev().take(100) {
                                 let ts = line.split(']').next().unwrap_or("Just now").trim_start_matches('[');
                                 let err = line.split("REASON=").nth(1).unwrap_or("Unknown").split(" PAYLOAD=").next().unwrap_or("Unknown");
@@ -174,7 +176,6 @@ impl App {
                                 dlq_res.push((ts.to_string(), err.to_string(), payload.to_string()));
                             }
                         }
-                    }
                 }
                 let _ = tx_poll.send(Action::UpdateDlq(dlq_res));
                 
@@ -219,13 +220,11 @@ impl App {
             for entry in fs::read_dir(metadata_dir)? {
                 let entry = entry?;
                 let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        if let Ok(meta) = serde_json::from_str::<RuleMetadata>(&content) {
+                if path.extension().and_then(|s| s.to_str()) == Some("json")
+                    && let Ok(content) = fs::read_to_string(&path)
+                        && let Ok(meta) = serde_json::from_str::<RuleMetadata>(&content) {
                             rules.push(meta);
                         }
-                    }
-                }
             }
         }
         rules.sort_by(|a, b| b.created_at.partial_cmp(&a.created_at).unwrap_or(std::cmp::Ordering::Equal));
@@ -363,9 +362,9 @@ impl App {
                             }
                         }
                         KeyCode::Char('a') | KeyCode::Enter => {
-                            if self.active_tab == ActiveTab::Gatekeeper {
-                                if let Some(i) = self.hitl_state.selected() {
-                                    if i < self.hitl_rules.len() {
+                            if self.active_tab == ActiveTab::Gatekeeper
+                                && let Some(i) = self.hitl_state.selected()
+                                    && i < self.hitl_rules.len() {
                                         let rule_id = self.hitl_rules[i].rule_id.clone();
                                         match Self::approve_rule_via_gatekeeper(&rule_id) {
                                             Ok(_) => {
@@ -376,13 +375,11 @@ impl App {
                                             }
                                         }
                                     }
-                                }
-                            }
                         }
                         KeyCode::Char('r') | KeyCode::Delete => {
-                            if self.active_tab == ActiveTab::Gatekeeper {
-                                if let Some(i) = self.hitl_state.selected() {
-                                    if i < self.hitl_rules.len() {
+                            if self.active_tab == ActiveTab::Gatekeeper
+                                && let Some(i) = self.hitl_state.selected()
+                                    && i < self.hitl_rules.len() {
                                         let rule_id = self.hitl_rules[i].rule_id.clone();
                                         match Self::reject_rule_via_gatekeeper(&rule_id) {
                                             Ok(_) => {}
@@ -391,17 +388,13 @@ impl App {
                                             }
                                         }
                                     }
-                                }
-                            }
                         }
                         KeyCode::Char('p') => {
-                            if self.active_tab == ActiveTab::Gatekeeper {
-                                if let Some(i) = self.hitl_state.selected() {
-                                    if i < self.hitl_rules.len() {
+                            if self.active_tab == ActiveTab::Gatekeeper
+                                && let Some(i) = self.hitl_state.selected()
+                                    && i < self.hitl_rules.len() {
                                         // Show full preview in a larger area
                                     }
-                                }
-                            }
                         }
                         _ => {}
                     }
@@ -416,9 +409,15 @@ impl App {
             }
             Action::UpdateHitl(rules) => {
                 self.hitl_rules = rules;
+                if self.hitl_state.selected().is_none() && !self.hitl_rules.is_empty() {
+                    self.hitl_state.select(Some(0));
+                }
             }
             Action::UpdateDlq(items) => {
                 self.dlq_items = items;
+                if self.dlq_state.selected().is_none() && !self.dlq_items.is_empty() {
+                    self.dlq_state.select(Some(0));
+                }
             }
             Action::UpdateLedger(tail, tick, count) => {
                 self.ledger_tail = tail;
@@ -594,11 +593,10 @@ impl App {
         let mut ai_running = false;
         if let Ok(content) = fs::read_to_string("/tmp/prism_ai_status") {
             if let Ok(ts) = content.trim().parse::<f64>() {
-                if let Ok(sys_time) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-                    if sys_time.as_secs_f64() - ts < 10.0 {
+                if let Ok(sys_time) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+                    && sys_time.as_secs_f64() - ts < 10.0 {
                         ai_running = true;
                     }
-                }
             } else if content.trim() == "online" {
                 ai_running = true;
             }
@@ -731,7 +729,7 @@ impl App {
         let table = Table::new(rows, [Constraint::Length(25), Constraint::Length(25), Constraint::Min(20)])
             .header(header)
             .block(Block::default().title(" DEAD LETTER QUEUE (UNKNOWN LOGS) ").borders(Borders::ALL).border_type(BorderType::Rounded).style(Style::default().fg(Color::LightRed)))
-            .highlight_style(Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD))
+            .row_highlight_style(Style::default().bg(Color::Red).fg(Color::White).add_modifier(Modifier::BOLD))
             .highlight_symbol(">> ");
         
         f.render_stateful_widget(table, area, &mut self.dlq_state);

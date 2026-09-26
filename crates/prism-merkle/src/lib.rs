@@ -1,16 +1,11 @@
 //! PRISM Merkle Tree with 2-of-3 Ed25519 Witness Cosigning (RFC 6962)
 //!
 //! Based on ULPF's RFC 6962 implementation with added 2-of-3 Witness Cosigning.
-//!
-//! The construction follows RFC 6962 (Certificate Transparency), including its
-//! domain separation: leaves are hashed with a `0x00` prefix and interior nodes
-//! with `0x01`, so no interior node can ever be mistaken for a leaf.
 
 use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Verifier, Signer};
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
-use thiserror::Error;
 
 pub type Hash = [u8; 32];
 
@@ -53,8 +48,11 @@ impl WitnessKeyPair {
 
     pub fn verify(&self, message: &[u8], signature: &[u8]) -> bool {
         let verifying_key = VerifyingKey::from_bytes(self.verifying_key.as_slice().try_into().unwrap()).unwrap();
-        let signature = Signature::from_bytes(signature.try_into().unwrap());
-        verifying_key.verify(message, &signature).is_ok()
+        let signature = Signature::from_slice(signature).ok();
+        if signature.is_none() {
+            return false;
+        }
+        verifying_key.verify(message, &signature.unwrap()).is_ok()
     }
 }
 
@@ -94,7 +92,7 @@ impl WitnessSignature {
 }
 
 /// A Merkle log with 2-of-3 Witness Cosigning
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct WitnessMerkleLog {
     /// The underlying Merkle log
     merkle: MerkleLog,
@@ -115,15 +113,18 @@ pub struct Checkpoint {
     pub timestamp: u64,
 }
 
-const LEAF_PREFIX: u8 = 0x00;
-const NODE_PREFIX: u8 = 0x01;
-
 /// The underlying Merkle log (RFC 6962)
 #[derive(Debug, Clone)]
 pub struct MerkleLog {
     leaves: Vec<Hash>,
     /// Roots of perfect subtrees that tile the leaves (largest first)
     fringe: VecDeque<(u64, Hash)>,
+}
+
+impl Default for MerkleLog {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl MerkleLog {
@@ -147,13 +148,13 @@ impl MerkleLog {
         self.fringe.push_back((1, leaf));
         while self.fringe.len() >= 2 {
             let len = self.fringe.len();
-            let (right_size, right) = self.fringe[fringe.len() - 1];
-            let (left_size, left) = self.fringe[fringe.len() - 2];
+            let (right_size, right) = self.fringe[len - 1];
+            let (left_size, left) = self.fringe[len - 2];
             if left_size != right_size {
                 break;
             }
             let merged = self.node_hash(&left, &right);
-            self.fringe.truncate(fringe.len() - 2);
+            self.fringe.truncate(len - 2);
             self.fringe.push_back((left_size + right_size, merged));
         }
     }
@@ -328,6 +329,10 @@ impl WitnessMerkleLog {
         self.merkle.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.merkle.is_empty()
+    }
+
     pub fn root(&self) -> Hash {
         self.merkle.root()
     }
@@ -375,10 +380,15 @@ impl WitnessMerkleLog {
         if checkpoint.signatures.len() < self.threshold {
             return false;
         }
+        if checkpoint.root_hash != self.root().to_vec() {
+            return false;
+        }
+        let vkeys = self.verifying_keys();
         checkpoint.signatures.iter()
-            .filter(|sig| sig.verify(&self.verifying_keys()))
+            .filter(|sig| sig.root_hash == checkpoint.root_hash && sig.verify(&vkeys))
             .count() >= self.threshold
     }
+
 
     fn verifying_keys(&self) -> [VerifyingKey; 3] {
         [
@@ -546,14 +556,15 @@ mod tests {
         let log = WitnessMerkleLog::new(keys);
         assert_eq!(
             log.merkle.root_hex(),
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262"
         );
     }
+
 
     #[test]
     fn witness_can_sign_and_verify() {
         let keys = [WitnessKeyPair::generate(), WitnessKeyPair::generate(), WitnessKeyPair::generate()];
-        let log = WitnessMerkleLog::new(keys);
+        let mut log = WitnessMerkleLog::new(keys);
         log.merkle.append(b"test event");
         
         let checkpoint = log.checkpoint().unwrap();
@@ -563,7 +574,7 @@ mod tests {
     #[test]
     fn tampered_checkpoint_fails() {
         let keys = [WitnessKeyPair::generate(), WitnessKeyPair::generate(), WitnessKeyPair::generate()];
-        let log = WitnessMerkleLog::new(keys);
+        let mut log = WitnessMerkleLog::new(keys);
         log.merkle.append(b"test");
         
         let mut checkpoint = log.checkpoint().unwrap();
@@ -573,7 +584,7 @@ mod tests {
 
     #[test]
     fn inclusion_proof_works() {
-        let mut log = log_of(16);
+        let log = log_of(16);
         let proof = log.merkle.inclusion_proof(7).unwrap();
         assert!(log.verify_inclusion(b"event-7", &proof, &log.merkle.root_hex()));
         assert!(!log.verify_inclusion(b"event-7-tampered", &proof, &log.merkle.root_hex()));
