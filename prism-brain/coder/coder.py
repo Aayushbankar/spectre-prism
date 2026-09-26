@@ -29,10 +29,11 @@ class VrlCoder:
             return self._heuristic_fallback(device_type)
             
         system_prompt = (
-            "You are an expert in Vector Remap Language (VRL). "
-            "You write pure VRL code without markdown formatting or explanation. "
-            "Example VRL syntax for IP extraction:\n"
-            ".ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip"
+            "You are an expert in Vector Remap Language (VRL) mapping logs to the OCSF taxonomy. "
+            "Depending on the log type (e.g. Authentication, Network Activity, Web Activity, File Activity), "
+            "set the appropriate `.class_uid`, `.category_uid`, and `.type_uid`. "
+            "Also extract relevant fields (e.g., .src_endpoint.ip). "
+            "Just return the raw VRL code without markdown formatting."
         )
         prompt = f"Write a VRL script to parse this {device_type} log template: {template}. Extract 'ip' into '.ip'. Just return the raw VRL code."
         
