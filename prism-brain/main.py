@@ -3,6 +3,23 @@ import sys
 import os
 import glob
 import json
+import re
+import hashlib
+
+def normalize_log_signature(payload: str) -> str:
+    """Generate a stable signature by stripping timestamps, IPs, ports, and session IDs."""
+    sig = payload
+    # Strip IP addresses
+    sig = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', '<IP>', sig)
+    # Strip timestamps (various formats)
+    sig = re.sub(r'\d{4}[-/]\d{2}[-/]\d{2}[T ]\d{2}:\d{2}:\d{2}', '<TS>', sig)
+    sig = re.sub(r'\w{3}\s+\d{1,2}\s+\d{4}\s+\d{2}:\d{2}:\d{2}', '<TS>', sig)  
+    sig = re.sub(r'\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2}', '<TS>', sig)
+    # Strip port numbers (standalone 4-5 digit numbers)
+    sig = re.sub(r'(?<=[:/])\d{4,5}(?=[\s/,]|$)', '<PORT>', sig)
+    # Strip session/connection IDs (large numbers)
+    sig = re.sub(r'\b\d{7,}\b', '<ID>', sig)
+    return hashlib.sha256(sig.encode()).hexdigest()
 
 # Ensure modules can be imported
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -10,6 +27,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from triage.triage import TriageEngine
 from coder.coder import VrlCoder
 from hitl.gatekeeper import Gatekeeper
+from cluster.cluster import LogClusterer
 
 def main():
     print("========================================")
@@ -20,8 +38,9 @@ def main():
     triage = TriageEngine({"device": "cpu"})
     coder = VrlCoder({"coder": {"enabled": True}})
     gatekeeper = Gatekeeper()
+    clusterer = LogClusterer()
     
-    processed_payloads = set()
+    processed_signatures = set()
     
     # Write a heartbeat file so the TUI knows we are online
     with open("/tmp/prism_ai_status", "w") as f:
@@ -49,9 +68,14 @@ def main():
                                 except:
                                     payload = line
                                 
-                                if payload not in processed_payloads:
+                                sig = normalize_log_signature(payload)
+                                if sig not in processed_signatures:
                                     print(f"\n[AI] Detected Unknown Payload in DLQ:\n{payload}")
-                                    processed_payloads.add(payload)
+                                    processed_signatures.add(sig)
+                                    
+                                    cluster_result = clusterer.process_log(payload)
+                                    if cluster_result['size'] > 1:
+                                        continue  # Template already seen, skip
                                     
                                     try:
                                         device_type = triage.classify(payload)
