@@ -155,9 +155,9 @@ impl App {
                     if let Some(path) = latest_dlq {
                         if let Ok(content) = std::fs::read_to_string(&path) {
                             for line in content.lines().rev().take(100) {
-                                let ts = line.split("\"timestamp\":\"").nth(1).unwrap_or("Just now").split('"').next().unwrap_or("Just now");
-                                let err = line.split("\"error\":\"").nth(1).unwrap_or("Unknown").split('"').next().unwrap_or("Unknown");
-                                let payload = line.split("\"payload\":\"").nth(1).unwrap_or(line).split('"').next().unwrap_or(line);
+                                let ts = line.split(']').next().unwrap_or("Just now").trim_start_matches('[');
+                                let err = line.split("REASON=").nth(1).unwrap_or("Unknown").split(" PAYLOAD=").next().unwrap_or("Unknown");
+                                let payload = line.split("PAYLOAD=").nth(1).unwrap_or(line);
                                 dlq_res.push((ts.to_string(), err.to_string(), payload.to_string()));
                             }
                         }
@@ -328,11 +328,13 @@ impl App {
             .split(area);
 
         // Slim EPS Gauge
+        let max_eps = self.eps_history.iter().map(|(_, y)| *y as u64).max().unwrap_or(1).max(1);
+        let gauge_pct = ((self.metrics.eps * 100) / max_eps).min(100) as u16;
         let eps_gauge = Gauge::default()
             .block(Block::default().title(" INGESTION THROUGHPUT ").borders(Borders::ALL).border_type(BorderType::Rounded))
             .gauge_style(Style::default().fg(Color::LightGreen).bg(Color::DarkGray))
-            .percent((self.metrics.eps.min(200000) as u16 / 2000).min(100))
-            .label(format!(" {} EPS ", self.metrics.eps));
+            .percent(gauge_pct)
+            .label(format!(" {} EPS (peak: {}) ", self.metrics.eps, max_eps));
         f.render_widget(eps_gauge, chunks[0]);
 
         // Beautiful Line Chart for EPS
@@ -399,7 +401,7 @@ impl App {
             .split(chunks[0]);
             
         // Latency
-        let lat_str = format!("\n\n{} μs", self.metrics.telemetry.latency_us);
+        let lat_str = format!("\n\n{} μs (estimated)", self.metrics.telemetry.latency_us);
         let lat_widget = Paragraph::new(lat_str)
             .block(Block::default().title(" AVG LATENCY ").borders(Borders::ALL).border_type(BorderType::Rounded))
             .style(Style::default().fg(Color::LightCyan).add_modifier(Modifier::BOLD))
