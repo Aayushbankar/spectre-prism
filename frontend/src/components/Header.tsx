@@ -3,16 +3,16 @@ import {
   Search,
   Bell,
   Download,
-  Filter,
   Play,
   Pause,
-  ChevronDown,
-  User,
-  Shield,
-  Layers,
   Zap,
   LayoutDashboard,
   Globe,
+  Layers,
+  HelpCircle,
+  Cpu,
+  AlertTriangle,
+  FileCode,
 } from 'lucide-react';
 import type { DashboardView, DashboardTheme } from '../types';
 
@@ -22,6 +22,7 @@ interface Props {
   theme: DashboardTheme;
   isLiveStreaming: boolean;
   onToggleLiveStream: () => void;
+  onOpenExplainer?: () => void;
 }
 
 export const Header: React.FC<Props> = ({
@@ -30,6 +31,7 @@ export const Header: React.FC<Props> = ({
   theme,
   isLiveStreaming,
   onToggleLiveStream,
+  onOpenExplainer,
 }) => {
   const isCyber = theme === 'cyber';
   const isDark = theme === 'dark' || isCyber;
@@ -93,13 +95,13 @@ export const Header: React.FC<Props> = ({
           <p className="text-xs text-slate-400 mt-0.5">{viewLabels[currentView].subtitle}</p>
         </div>
 
-        {/* View Switcher Tabs (Quick Access to D1, D2, D3, All) */}
-        <div className="flex items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
+        {/* View Switcher Tabs (Quick Access to D1, D2, D3, HitL, DLQ, VRL, All) */}
+        <div className="flex flex-wrap items-center gap-1 p-1 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium">
           <button
             onClick={() => onViewChange('pipeline')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
               currentView === 'pipeline'
-                ? 'bg-cyan-600 text-white shadow'
+                ? 'bg-cyan-600 text-white font-bold shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -109,9 +111,9 @@ export const Header: React.FC<Props> = ({
 
           <button
             onClick={() => onViewChange('analytics')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
               currentView === 'analytics'
-                ? 'bg-purple-600 text-white shadow'
+                ? 'bg-purple-600 text-white font-bold shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -121,7 +123,7 @@ export const Header: React.FC<Props> = ({
 
           <button
             onClick={() => onViewChange('tactical')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
               currentView === 'tactical'
                 ? 'bg-amber-500 text-black font-bold shadow'
                 : 'text-slate-400 hover:text-white'
@@ -132,10 +134,46 @@ export const Header: React.FC<Props> = ({
           </button>
 
           <button
+            onClick={() => onViewChange('gatekeeper')}
+            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+              currentView === 'gatekeeper'
+                ? 'bg-purple-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Cpu className="w-3.5 h-3.5" />
+            <span>HitL</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('dlq')}
+            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+              currentView === 'dlq'
+                ? 'bg-rose-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span>DLQ</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('vrl')}
+            className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+              currentView === 'vrl'
+                ? 'bg-blue-600 text-white font-bold shadow'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <FileCode className="w-3.5 h-3.5" />
+            <span>VRL Sandbox</span>
+          </button>
+
+          <button
             onClick={() => onViewChange('all')}
-            className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
               currentView === 'all'
-                ? 'bg-emerald-600 text-white shadow'
+                ? 'bg-emerald-600 text-white font-bold shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
@@ -144,8 +182,20 @@ export const Header: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Right: Actions, Live Stream Toggle, Search & User Avatar */}
-        <div className="flex items-center gap-3">
+        {/* Right: Actions, Explainer, Live Stream Toggle, Search & User Avatar */}
+        <div className="flex items-center gap-2.5">
+          {/* How This Works Guide Button */}
+          {onOpenExplainer && (
+            <button
+              onClick={onOpenExplainer}
+              className="px-2.5 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-950/80 text-xs font-semibold flex items-center gap-1.5 transition"
+              title="Learn how this dashboard works and what it means"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden sm:inline">Guide</span>
+            </button>
+          )}
+
           {/* Live Stream Simulation Toggle */}
           <button
             onClick={onToggleLiveStream}
@@ -166,7 +216,7 @@ export const Header: React.FC<Props> = ({
             <input
               type="text"
               placeholder="Search IP, Hash, CVE..."
-              className="w-48 lg:w-56 pl-9 pr-3 py-1.5 rounded-xl text-xs bg-slate-900/80 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition"
+              className="w-44 lg:w-52 pl-9 pr-3 py-1.5 rounded-xl text-xs bg-slate-900/80 border border-slate-800 text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-cyan-500 transition"
             />
           </div>
 
@@ -179,7 +229,7 @@ export const Header: React.FC<Props> = ({
             <Download className="w-4 h-4" />
           </button>
 
-          {/* Notifications with badge (matches "2" in dashboard2.jpeg) */}
+          {/* Notifications with badge */}
           <div className="relative">
             <button className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition">
               <Bell className="w-4 h-4" />

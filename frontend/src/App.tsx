@@ -9,11 +9,18 @@ import { LiveBackendBridge } from './components/LiveBackendBridge';
 import { GatekeeperHITLView } from './components/GatekeeperHITLView';
 import { DLQInspectorView } from './components/DLQInspectorView';
 import { VRLPlaygroundView } from './components/VRLPlaygroundView';
+import { ExecutiveBriefing, type SystemScenario } from './components/ExecutiveBriefing';
+import { DashboardExplainerModal } from './components/DashboardExplainerModal';
 
 export function App() {
   const [currentView, setCurrentView] = useState<DashboardView>('all');
   const [theme, setTheme] = useState<DashboardTheme>('dark');
   const [isLiveStreaming, setIsLiveStreaming] = useState<boolean>(true);
+  const [scenario, setScenario] = useState<SystemScenario>('baseline');
+  const [isExplainerOpen, setIsExplainerOpen] = useState<boolean>(false);
+  const [isBackendLive, setIsBackendLive] = useState<boolean>(false);
+  const [liveEps, setLiveEps] = useState<number>(85620);
+
   const [vrlInitialPayload, setVrlInitialPayload] = useState<string | undefined>(undefined);
   const [vrlInitialRule, setVrlInitialRule] = useState<string | undefined>(undefined);
 
@@ -40,6 +47,12 @@ export function App() {
           : 'bg-[#0f111a] text-slate-100 font-sans'
       }`}
     >
+      {/* Explainer Modal */}
+      <DashboardExplainerModal
+        isOpen={isExplainerOpen}
+        onClose={() => setIsExplainerOpen(false)}
+      />
+
       {/* Left Sidebar Navigation */}
       <Sidebar
         currentView={currentView}
@@ -56,23 +69,41 @@ export function App() {
           theme={theme}
           isLiveStreaming={isLiveStreaming}
           onToggleLiveStream={() => setIsLiveStreaming(!isLiveStreaming)}
+          onOpenExplainer={() => setIsExplainerOpen(true)}
         />
 
-        <main className="flex-1 p-6 space-y-8 max-w-[1600px] w-full mx-auto">
-          {/* Always Visible: Real PRISM Backend Telemetry & Ingest Controller */}
-          <LiveBackendBridge theme={theme} />
+        <main className="flex-1 p-6 space-y-6 max-w-[1600px] w-full mx-auto">
+          {/* Executive Briefing: Explains what the dashboard is saying in plain English */}
+          <ExecutiveBriefing
+            theme={theme}
+            scenario={scenario}
+            onScenarioChange={setScenario}
+            onOpenExplainer={() => setIsExplainerOpen(true)}
+            onOpenGatekeeper={() => setCurrentView('gatekeeper')}
+            isBackendLive={isBackendLive}
+            eps={liveEps}
+          />
 
-          {/* View 1: Ingest & Traffic Flow (Design 1) */}
+          {/* Real Backend Bridge & Live Traffic Controller */}
+          <LiveBackendBridge
+            theme={theme}
+            onLiveMetricsUpdate={(metrics) => {
+              setIsBackendLive(true);
+              if (metrics.eps > 0) setLiveEps(metrics.eps);
+            }}
+          />
+
+          {/* View 1: Ingest & Traffic Flow (Design 1 - ideainso3.jpeg) */}
           {currentView === 'pipeline' && (
             <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 2: Executive Analytics & Operations (Design 2) */}
+          {/* View 2: Executive Analytics & Operations (Design 2 - dashboard2.jpeg) */}
           {currentView === 'analytics' && (
             <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
 
-          {/* View 3: Tactical Cyber Command & Threat Map (Design 3) */}
+          {/* View 3: Tactical Cyber Command & Threat Map (Design 3 - dashboard_1.jpeg) */}
           {currentView === 'tactical' && (
             <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
           )}
@@ -108,7 +139,7 @@ export function App() {
                     </span>
                     <h2 className="text-lg font-bold">Traffic Flow & Pipeline Overview</h2>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">Zero-Alloc UDP Buffer → OCSF Egress</span>
+                  <span className="text-xs text-slate-400 font-mono">Zero-Alloc UDP Buffer → OCSF Egress</span>
                 </div>
                 <FlowPipelineView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>
@@ -122,7 +153,7 @@ export function App() {
                     </span>
                     <h2 className="text-lg font-bold">Executive Analytics & Real-Time Telemetry</h2>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">Multi-Theme • Live Spline EPS</span>
+                  <span className="text-xs text-slate-400 font-mono">Multi-Theme • Live Spline EPS</span>
                 </div>
                 <ExecutiveAnalyticsView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>
@@ -136,7 +167,7 @@ export function App() {
                     </span>
                     <h2 className="text-lg font-bold">Tactical Cyber Command & Threat Intelligence</h2>
                   </div>
-                  <span className="text-xs text-slate-500 font-mono">Global Map • Section 65B History</span>
+                  <span className="text-xs text-slate-400 font-mono">Global Map • Section 65B History</span>
                 </div>
                 <TacticalCommandView theme={theme} isLiveStreaming={isLiveStreaming} />
               </section>

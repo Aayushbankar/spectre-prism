@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, TrendingUp, Radio } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, TrendingUp, Radio, Info } from 'lucide-react';
 import {
-  KPI_METRICS,
   DEVICE_BREAKDOWN,
   REALTIME_BARS,
   SITE_TRAFFIC_SERIES,
@@ -17,6 +16,7 @@ interface Props {
 
 export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming }) => {
   const [hoveredMonth, setHoveredMonth] = useState<number | null>(7); // Default to Aug (peak index 7)
+  const [timeframe, setTimeframe] = useState<'week' | 'month' | 'year'>('week');
   const isCyber = theme === 'cyber';
   const isDark = theme === 'dark' || isCyber;
 
@@ -47,7 +47,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           strokeLinejoin="round"
           points={points.join(' ')}
         />
-        {/* Glowing last point */}
         {data.length > 0 && (
           <circle
             cx={w}
@@ -68,7 +67,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
   const getY = (val: number) => chartH - (val / maxTrafficVal) * (chartH - 40) - 20;
   const getX = (idx: number) => 40 + (idx / (SITE_TRAFFIC_SERIES.length - 1)) * (chartW - 80);
 
-  // Generate smooth cubic bezier SVG path for time-series
   const createSmoothPath = (key: 'newVisitors' | 'returning') => {
     const points = SITE_TRAFFIC_SERIES.map((d, i) => ({ x: getX(i), y: getY(d[key]) }));
     if (points.length < 2) return '';
@@ -92,6 +90,36 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
 
   return (
     <div className="space-y-6">
+      {/* Top Explanatory Banner for C-Level View */}
+      <div
+        className={`p-4 rounded-2xl border text-xs leading-relaxed flex items-center justify-between gap-4 ${
+          isDark
+            ? 'bg-[#141724]/70 border-slate-800 text-slate-300'
+            : 'bg-white/90 border-slate-200 text-slate-700 shadow-sm'
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Info className="w-4 h-4 text-purple-400 shrink-0" />
+          <span>
+            <strong>Executive Analytics Perspective:</strong> Real-time overview of network session EPS, active sensor endpoints, zero-allocation microsecond parse latency, and firewall vendor distributions.
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 font-mono text-[11px]">
+          <span className="text-slate-400">Timeframe:</span>
+          {(['week', 'month', 'year'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              className={`px-2 py-0.5 rounded capitalize ${
+                timeframe === t ? 'bg-purple-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Top Row: 3 KPI Cards with Sparklines + 1 Devices Donut (exact layout of dashboard2.jpeg) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI 1: Sessions */}
@@ -101,17 +129,23 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-            <span>Sessions (EPS)</span>
+            <span className="font-semibold text-slate-300">Sessions (EPS)</span>
             <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">Last week ▾</span>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-3xl font-extrabold tracking-tight">856</span>
+            <div>
+              <span className="text-3xl font-extrabold tracking-tight">856</span>
+              <span className="text-xs text-slate-400 ml-1">k events/s</span>
+            </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-rose-500">
               <ArrowDownRight className="w-4 h-4" />
               <span>-12%</span>
             </div>
           </div>
-          <div className="mt-4 flex justify-end">{renderSparkline([98, 92, 95, 89, 91, 84, 86], false)}</div>
+          <div className="mt-1 text-[11px] text-slate-400 leading-tight">
+            Ingestion throughput across 12 worker threads
+          </div>
+          <div className="mt-3 flex justify-end">{renderSparkline([98, 92, 95, 89, 91, 84, 86], false)}</div>
         </div>
 
         {/* KPI 2: Users */}
@@ -121,17 +155,23 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-            <span>Sensor Nodes</span>
+            <span className="font-semibold text-slate-300">Sensor Nodes</span>
             <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">Last week ▾</span>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-3xl font-extrabold tracking-tight">523</span>
+            <div>
+              <span className="text-3xl font-extrabold tracking-tight">523</span>
+              <span className="text-xs text-slate-400 ml-1">online</span>
+            </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-emerald-400">
               <ArrowUpRight className="w-4 h-4" />
               <span>+23%</span>
             </div>
           </div>
-          <div className="mt-4 flex justify-end">{renderSparkline([410, 425, 460, 470, 490, 510, 523], true)}</div>
+          <div className="mt-1 text-[11px] text-slate-400 leading-tight">
+            Active firewalls streaming syslog over UDP/TCP
+          </div>
+          <div className="mt-3 flex justify-end">{renderSparkline([410, 425, 460, 470, 490, 510, 523], true)}</div>
         </div>
 
         {/* KPI 3: Time spent */}
@@ -141,17 +181,23 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-            <span>Parse Latency (p99)</span>
+            <span className="font-semibold text-slate-300">Parse Latency (p99)</span>
             <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">Last week ▾</span>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-3xl font-extrabold tracking-tight">9.56</span>
+            <div>
+              <span className="text-3xl font-extrabold tracking-tight">9.56</span>
+              <span className="text-xs text-slate-400 ml-1">µs</span>
+            </div>
             <div className="flex items-center gap-1 text-xs font-semibold text-cyan-400">
               <ArrowUpRight className="w-4 h-4" />
               <span>+8%</span>
             </div>
           </div>
-          <div className="mt-4 flex justify-end">{renderSparkline([7.2, 8.1, 7.8, 8.9, 8.4, 9.1, 9.56], true)}</div>
+          <div className="mt-1 text-[11px] text-slate-400 leading-tight">
+            Zero-alloc VRL router runtime (well under 25µs SLA)
+          </div>
+          <div className="mt-3 flex justify-end">{renderSparkline([7.2, 8.1, 7.8, 8.9, 8.4, 9.1, 9.56], true)}</div>
         </div>
 
         {/* KPI 4: Devices Donut */}
@@ -161,7 +207,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-            <span>Devices / Protocols</span>
+            <span className="font-semibold text-slate-300">Transport Protocols</span>
             <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">Today ▾</span>
           </div>
 
@@ -169,9 +215,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
             {/* Donut ring */}
             <div className="relative w-20 h-20 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                {/* 49% Orange */}
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#f97316" strokeWidth="12" strokeDasharray="117 239" />
-                {/* 36% Cyan */}
                 <circle
                   cx="50"
                   cy="50"
@@ -182,7 +226,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                   strokeDasharray="86 239"
                   strokeDashoffset="-117"
                 />
-                {/* 15% Purple */}
                 <circle
                   cx="50"
                   cy="50"
@@ -204,25 +247,25 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
             <div className="space-y-1 text-[11px]">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#f97316]" />
-                <span className="text-slate-400">Desktop</span>
-                <span className="font-semibold text-slate-200 ml-auto">305 / 49%</span>
+                <span className="text-slate-400">UDP Syslog</span>
+                <span className="font-semibold text-slate-200 ml-auto">49%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
-                <span className="text-slate-400">Mobile</span>
-                <span className="font-semibold text-slate-200 ml-auto">158 / 36%</span>
+                <span className="text-slate-400">TCP / TLS</span>
+                <span className="font-semibold text-slate-200 ml-auto">36%</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#a855f7]" />
-                <span className="text-slate-400">Tablet</span>
-                <span className="font-semibold text-slate-200 ml-auto">65 / 15%</span>
+                <span className="text-slate-400">NetFlow v9</span>
+                <span className="font-semibold text-slate-200 ml-auto">15%</span>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Middle Row: Real-time Data (Left) + Site Traffic Spline Chart (Right) (matches dashboard2.jpeg) */}
+      {/* Middle Row: Real-time Data (Left) + Site Traffic Spline Chart (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Real-time Data Card (4 cols) */}
         <div
@@ -231,7 +274,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold tracking-tight">Real-time Data</h3>
+            <h3 className="text-base font-bold tracking-tight">Real-time Buffer Gauges</h3>
             <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
               <Radio className="w-3.5 h-3.5 animate-pulse" /> Live
             </span>
@@ -249,7 +292,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                       <span className="text-[10px] text-slate-500">max {item.max}</span>
                     </div>
                   </div>
-                  {/* Progress bar */}
                   <div className="w-full h-2 rounded-full bg-slate-800/80 overflow-hidden">
                     <div
                       className="h-full rounded-full transition-all duration-500"
@@ -273,13 +315,16 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           }`}
         >
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h3 className="text-base font-bold tracking-tight">Site Traffic · Ingestion Telemetry</h3>
+            <div>
+              <h3 className="text-base font-bold tracking-tight">Site Traffic · Ingestion Telemetry</h3>
+              <p className="text-xs text-slate-400">Comparing Raw Ingested Events vs Validated OCSF Events</p>
+            </div>
             <div className="flex items-center gap-4 text-xs font-medium">
               <span className="flex items-center gap-1.5 text-slate-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7]" /> New visitor (Ingested)
+                <span className="w-2.5 h-2.5 rounded-full bg-[#a855f7]" /> Raw Ingested (EPS)
               </span>
               <span className="flex items-center gap-1.5 text-slate-400">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#06b6d4]" /> Returning visitor (Normalized)
+                <span className="w-2.5 h-2.5 rounded-full bg-[#06b6d4]" /> Normalized OCSF
               </span>
               <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">
                 This year ▾
@@ -301,28 +346,26 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                 </linearGradient>
               </defs>
 
-              {/* Horizontal Grid lines */}
+              {/* Grid lines */}
               {[200, 400, 600, 800, 1000].map((val) => {
                 const y = getY(val);
                 return (
                   <g key={val}>
                     <line x1="30" y1={y} x2={chartW - 30} y2={y} stroke="#334155" strokeDasharray="3 3" opacity="0.3" />
                     <text x="25" y={y + 3} textAnchor="end" className="text-[9px] fill-slate-500 font-mono">
-                      {val}
+                      {val}k
                     </text>
                   </g>
                 );
               })}
 
-              {/* Area fills */}
               <path d={newVisitorsArea} fill="url(#purpleGrad)" />
               <path d={returningArea} fill="url(#cyanGrad)" />
 
-              {/* Spline stroke lines */}
               <path d={newVisitorsPath} fill="none" stroke="#a855f7" strokeWidth="3" />
               <path d={returningPath} fill="none" stroke="#06b6d4" strokeWidth="3" />
 
-              {/* Interactive Month Points & Tooltip */}
+              {/* Points & Interactive Tooltip */}
               {SITE_TRAFFIC_SERIES.map((d, i) => {
                 const x = getX(i);
                 const yNew = getY(d.newVisitors);
@@ -330,14 +373,12 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
 
                 return (
                   <g key={d.month} className="cursor-pointer" onMouseEnter={() => setHoveredMonth(i)}>
-                    {/* Hover vertical line */}
                     {isHovered && (
                       <line x1={x} y1="10" x2={x} y2={chartH} stroke="#94a3b8" strokeWidth="1" strokeDasharray="2 2" />
                     )}
 
                     <circle cx={x} cy={yNew} r={isHovered ? 6 : 3.5} fill="#a855f7" stroke="#ffffff" strokeWidth="2" />
 
-                    {/* Tooltip on active point (matches "680 Aug 16" in dashboard2.jpeg) */}
                     {isHovered && (
                       <g transform={`translate(${x}, ${yNew - 40})`}>
                         <rect
@@ -352,7 +393,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                           filter="drop-shadow(0 4px 6px rgba(0,0,0,0.5))"
                         />
                         <text x="0" y="-3" textAnchor="middle" className="text-[11px] font-bold fill-white">
-                          {d.newVisitors}
+                          {d.newVisitors}k EPS
                         </text>
                         <text x="0" y="8" textAnchor="middle" className="text-[9px] font-medium fill-slate-400">
                           {d.month} 16
@@ -360,7 +401,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                       </g>
                     )}
 
-                    {/* Month X-axis label */}
                     <text x={x} y={chartH + 15} textAnchor="middle" className="text-[10px] fill-slate-400">
                       {d.month}
                     </text>
@@ -372,9 +412,9 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
         </div>
       </div>
 
-      {/* Bottom Row: Traffic from Social / Vendors (Donut) + Middle Time on Site (Bar Chart) + Top Pages (matches dashboard2.jpeg) */}
+      {/* Bottom Row: Traffic from Vendors + Latency Distribution + Top Rules */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-        {/* 1. Traffic from Social / Firewalls (Donut) (4 cols) */}
+        {/* 1. Firewall Vendor Breakdown (4 cols) */}
         <div
           className={`lg:col-span-4 rounded-2xl border p-5 transition-all duration-300 shadow-md flex flex-col justify-between ${
             isDark ? 'bg-[#181a26]/90 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
@@ -386,12 +426,9 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           </div>
 
           <div className="my-4 flex items-center justify-around">
-            {/* Donut Chart */}
             <div className="relative w-28 h-28 flex items-center justify-center">
               <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                {/* 45% Red */}
                 <circle cx="50" cy="50" r="38" fill="none" stroke="#ef4444" strokeWidth="14" strokeDasharray="107 239" />
-                {/* 20% Orange */}
                 <circle
                   cx="50"
                   cy="50"
@@ -402,7 +439,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                   strokeDasharray="48 239"
                   strokeDashoffset="-107"
                 />
-                {/* 15% Yellow */}
                 <circle
                   cx="50"
                   cy="50"
@@ -413,7 +449,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                   strokeDasharray="36 239"
                   strokeDashoffset="-155"
                 />
-                {/* 11% Blue */}
                 <circle
                   cx="50"
                   cy="50"
@@ -424,7 +459,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                   strokeDasharray="26 239"
                   strokeDashoffset="-191"
                 />
-                {/* 9% Cyan */}
                 <circle
                   cx="50"
                   cy="50"
@@ -442,7 +476,6 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
               </div>
             </div>
 
-            {/* Breakdown List */}
             <div className="space-y-1.5 text-xs">
               {VENDOR_TRAFFIC_DONUT.items.map((item) => (
                 <div key={item.label} className="flex items-center gap-2">
@@ -457,18 +490,17 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           </div>
         </div>
 
-        {/* 2. Middle time on site / Latency Distribution (Bar Chart) (4 cols) */}
+        {/* 2. Latency Distribution (Bar Chart) (4 cols) */}
         <div
           className={`lg:col-span-4 rounded-2xl border p-5 transition-all duration-300 shadow-md flex flex-col justify-between ${
             isDark ? 'bg-[#181a26]/90 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
           }`}
         >
           <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
-            <span className="font-bold text-slate-100 text-sm">Middle time on site · Latency</span>
+            <span className="font-bold text-slate-100 text-sm">Parse Latency Distribution</span>
             <span className="text-[11px] bg-slate-800/60 px-2 py-0.5 rounded border border-slate-700/50">Last 14 days ▾</span>
           </div>
 
-          {/* Vertical Bar Chart with Highlighted Peak (matches dashboard2.jpeg) */}
           <div className="mt-4 flex items-end justify-between h-44 px-2">
             {TIME_ON_SITE_BARS.map((bar, idx) => {
               const heightPct = Math.round((bar.value / 14) * 100);
@@ -476,7 +508,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
                 <div key={idx} className="flex flex-col items-center gap-1 group relative">
                   {bar.isPeak && (
                     <div className="absolute -top-7 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-600 text-[10px] font-bold text-white shadow">
-                      {bar.value} min
+                      {bar.value} µs
                     </div>
                   )}
                   <div
@@ -495,7 +527,7 @@ export const ExecutiveAnalyticsView: React.FC<Props> = ({ theme, isLiveStreaming
           </div>
         </div>
 
-        {/* 3. Top Pages / VRL Rules Ranked (4 cols) */}
+        {/* 3. Top Rules Ranked (4 cols) */}
         <div
           className={`lg:col-span-4 rounded-2xl border p-5 transition-all duration-300 shadow-md ${
             isDark ? 'bg-[#181a26]/90 border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
