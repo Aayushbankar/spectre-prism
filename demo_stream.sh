@@ -1,4 +1,10 @@
 #!/bin/bash
+# Cleanup any previous instances
+pkill -f 'target/release/prism' 2>/dev/null || true
+pkill -f 'target/debug/prism' 2>/dev/null || true
+rm -rf /tmp/prism/* 2>/dev/null || true
+sleep 1
+
 # demo_stream.sh
 # Generates a continuous stream of traffic to test PRISM TUI interactivity
 # Usage: ./demo_stream.sh [PORT] (Default 514)

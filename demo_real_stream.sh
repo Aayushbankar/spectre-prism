@@ -1,4 +1,10 @@
 #!/bin/bash
+# Cleanup any previous instances
+pkill -f 'target/release/prism' 2>/dev/null || true
+pkill -f 'target/debug/prism' 2>/dev/null || true
+rm -rf /tmp/prism/* 2>/dev/null || true
+sleep 1
+
 # demo_real_stream.sh
 # Streams actual Fortinet, Cisco, and Palo Alto logs from the dataset directory
 
@@ -8,6 +14,8 @@ mkdir -p /tmp/prism/rules
 cp rules/*.vrl /tmp/prism/rules/
 
 echo "Starting REAL continuous log stream to 127.0.0.1:$PORT... (Press Ctrl+C to stop)"
+
+trap 'echo -e "\n[*] Stream stopped."; exit 0' INT
 
 # Pre-load logs into memory for speed
 FORTINET_LOG=$(head -n 1 data/samples/fortinet_fortigate.log)
