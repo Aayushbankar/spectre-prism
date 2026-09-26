@@ -7,18 +7,21 @@ import uuid
 class Gatekeeper:
     def __init__(self, rules_dir: str = "/etc/prism/rules"):
         self.rules_dir = rules_dir
+        self.pending_dir = "/tmp/prism/pending_rules"
         if not os.path.exists(self.rules_dir):
             try:
                 os.makedirs(self.rules_dir, exist_ok=True)
+                os.makedirs(self.pending_dir, exist_ok=True)
             except PermissionError:
                 # Fallback for tests
                 self.rules_dir = "/tmp/prism/rules"
                 os.makedirs(self.rules_dir, exist_ok=True)
+                os.makedirs(self.pending_dir, exist_ok=True)
 
     def approve_and_deploy(self, device_type: str, vrl_code: str, signature: str, raw_log: str = None) -> str:
-        """Approve and deploy the new VRL rule to the rules directory for Rust hot-reload."""
+        """Approve and deploy the new VRL rule to the pending rules directory for HitL approval."""
         vendor_name = device_type.replace(' ', '_').lower()
-        vrl_path = os.path.join(self.rules_dir, f"{vendor_name}.vrl")
+        vrl_path = os.path.join(self.pending_dir, f"{vendor_name}.vrl")
         
         # Write to a temporary file in the same directory for atomic rename later
         tmp_vrl_path = f"{vrl_path}.tmp"
@@ -48,7 +51,7 @@ class Gatekeeper:
         # Atomic rename to prevent hot-reloading a half-written file
         os.rename(tmp_vrl_path, vrl_path)
         
-        yaml_path = os.path.join(self.rules_dir, f"{vendor_name}.yaml")
+        yaml_path = os.path.join(self.pending_dir, f"{vendor_name}.yaml")
         with open(yaml_path, "w") as f:
             f.write(f"signature: \"{signature}\"\nvrl_file: \"{vrl_path}\"\n")
             
