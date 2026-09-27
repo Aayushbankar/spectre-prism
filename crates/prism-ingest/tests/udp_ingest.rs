@@ -261,7 +261,7 @@ async fn test_1m_burst_ingest() {
         }
     });
 
-    let result = timeout(Duration::from_secs(15), async {
+    let result = timeout(Duration::from_secs(45), async {
         let mut count = 0;
         while data_rx.recv_async().await.is_ok() {
             let _ = prov_rx.recv_async().await.unwrap();

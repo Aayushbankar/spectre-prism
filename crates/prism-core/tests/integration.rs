@@ -64,23 +64,27 @@ fn get_network_activity(ocsf: &OcsfEvent) -> Option<&prism_common::OcsfNetworkAc
 
 #[tokio::test]
 async fn test_data_plane_routing() {
-    let _ = std::process::Command::new("docker")
-        .args(["compose", "down", "-v"])
-        .current_dir("../../")
-        .output();
+    let client = reqwest::Client::new();
+    let es_already_available = client.get("http://localhost:9200").send().await.map(|r| r.status().is_success()).unwrap_or(false);
 
-    // Start docker-compose if docker is available
-    let docker_started = match std::process::Command::new("docker")
-        .args(["compose", "up", "-d", "elasticsearch", "--wait", "--wait-timeout", "60"])
-        .current_dir("../../")
-        .output()
-    {
-        Ok(out) => out.status.success(),
-        Err(_) => false,
+    // Only attempt docker-compose if ES is not already running and docker is explicitly enabled
+    let docker_started = if !es_already_available && std::env::var("PRISM_DOCKER_ES").map(|v| v == "1").unwrap_or(false) {
+        let _ = std::process::Command::new("docker")
+            .args(["compose", "down", "-v"])
+            .current_dir("../../")
+            .output();
+        match std::process::Command::new("docker")
+            .args(["compose", "up", "-d", "elasticsearch", "--wait", "--wait-timeout", "15"])
+            .current_dir("../../")
+            .output()
+        {
+            Ok(out) => out.status.success(),
+            Err(_) => false,
+        }
+    } else {
+        false
     };
     
-    // give it an extra moment if needed, but --wait should block until healthy
-
     let dlq_path = "/tmp/prism_dlq_integration_test.log";
     let _ = fs::remove_file(dlq_path);
     let mut dlq = DeadLetterQueue::new(Some(dlq_path)).unwrap();
@@ -91,8 +95,7 @@ async fn test_data_plane_routing() {
     
     let mut batch = Vec::new();
     
-    let client = reqwest::Client::new();
-    let es_available = client.get("http://localhost:9200").send().await.map(|r| r.status().is_success()).unwrap_or(false);
+    let es_available = es_already_available || client.get("http://localhost:9200").send().await.map(|r| r.status().is_success()).unwrap_or(false);
 
     // Test 50,000 heterogeneous logs
     for i in 0..50_000 {

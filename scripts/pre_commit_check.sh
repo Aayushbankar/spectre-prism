@@ -16,41 +16,50 @@ echo -e "${BOLD}${CYAN}======================================================${R
 echo -e "${BOLD}${CYAN}     PRISM Strict Pre-Commit Verification Gate        ${RESET}"
 echo -e "${BOLD}${CYAN}======================================================${RESET}"
 
-# Stage 0: Staged file sanity check (no accidentally staged keys, giant binaries, or secrets)
+# Stage 1: Staged file security, sensitive patterns & size check
 echo -e "\n${BOLD}[Stage 1/4] Checking Staged Files Integrity...${RESET}"
-STAGED_FILES=$(git diff --cached --name-only || true)
-if [ -n "$STAGED_FILES" ]; then
-    BLOCKED_PATTERNS=(".env" "id_rsa" "id_ed25519" ".pem" "key.json")
-    for file in $STAGED_FILES; do
-        for pattern in "${BLOCKED_PATTERNS[@]}"; do
-            if [[ "$file" == *"$pattern"* ]]; then
-                echo -e "  ${RED}✗ ERROR: Blocked sensitive file detected in staging: $file${RESET}"
-                exit 1
-            fi
-        done
-        # Check if file is > 25MB (GitHub limit warning)
-        if [ -f "$file" ]; then
-            FILE_SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo 0)
-            if [ "$FILE_SIZE" -gt 26214400 ]; then
-                echo -e "  ${RED}✗ ERROR: File exceeds 25MB: $file (${FILE_SIZE} bytes)${RESET}"
-                exit 1
-            fi
+BLOCKED_PATTERNS=(".env" "id_rsa" "id_ed25519" "id_ecdsa" ".pem" ".key" ".pfx" ".p12" "credentials.json")
+has_staged_error=0
+
+while IFS= read -r -d '' file; do
+    [ -z "$file" ] && continue
+    for pattern in "${BLOCKED_PATTERNS[@]}"; do
+        if [[ "$file" == *"$pattern"* ]]; then
+            echo -e "  ${RED}✗ ERROR: Blocked sensitive file detected in staging: $file${RESET}"
+            has_staged_error=1
         fi
     done
-fi
-echo -e "  ${GREEN}✓${RESET} Staged files passed security and size limits."
+    if [ -f "$file" ]; then
+        FILE_SIZE=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file" 2>/dev/null || echo 0)
+        if [ "$FILE_SIZE" -gt 26214400 ]; then
+            echo -e "  ${RED}✗ ERROR: File exceeds 25MB: $file (${FILE_SIZE} bytes)${RESET}"
+            has_staged_error=1
+        fi
+    fi
+done < <(git diff --cached --name-only -z || true)
 
-# Stage 1: Visual Assets, Markdown Links, Diagram Fallbacks, and Frontend Build
+if [ "$has_staged_error" -ne 0 ]; then
+    echo -e "  ${RED}Pre-commit aborted due to staging violations.${RESET}"
+    exit 1
+fi
+echo -e "  ${GREEN}✓${RESET} Staged files passed security patterns and size limits."
+
+# Stage 2: Visual Assets, Markdown Links, Diagram Fallbacks, and Frontend Build
 echo -e "\n${BOLD}[Stage 2/4] Verifying Visuals, Links, Fallbacks & Frontend...${RESET}"
 python3 "$REPO_ROOT/scripts/verify_visuals_and_docs.py"
 
-# Stage 2: Rust Workspace Compilation & Syntax Check
+# Stage 3: Rust Workspace Compilation & Syntax Check
 echo -e "\n${BOLD}[Stage 3/4] Verifying Rust Workspace Compilation (cargo check)...${RESET}"
 cargo check --workspace --all-targets
 
-# Stage 3: Fast Rust Unit Tests
-echo -e "\n${BOLD}[Stage 4/4] Running Rust Unit & Integration Tests (fast suite)...${RESET}"
-cargo test --workspace --bins --lib
+# Stage 4: Rust Unit & Critical Integration Tests
+if [ "${1:-}" = "--full" ]; then
+    echo -e "\n${BOLD}[Stage 4/4] Running Full Rust Workspace Test Suite (--full)...${RESET}"
+    cargo test --workspace
+else
+    echo -e "\n${BOLD}[Stage 4/4] Running Rust Unit & Critical Integration Tests (including real_data)...${RESET}"
+    cargo test --workspace --bins --lib --test real_data
+fi
 
 echo -e "\n${BOLD}${GREEN}======================================================${RESET}"
 echo -e "${BOLD}${GREEN}   ✓ ALL PRE-COMMIT VERIFICATION CHECKS PASSED!       ${RESET}"
