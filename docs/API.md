@@ -255,3 +255,182 @@ curl -s http://localhost:5173/api/real/witness | jq .
   ]
 }
 ```
+
+---
+
+## ⚡ Real-Time WebSocket Streaming Protocol
+
+PRISM provides a low-latency, full-duplex WebSocket gateway for classified SOC consoles, real-time SIEM forwarders, and streaming telemetry dashboards.
+
+### Endpoint URL
+- **Vite Dev / Proxy Bridge**: `ws://localhost:5173/ws/telemetry`
+- **Native PRISM Server**: `ws://127.0.0.1:8080/ws/telemetry`
+
+---
+
+### Subscription Channels
+
+Clients can subscribe to one or more real-time channels:
+
+| Channel | Frequency | Content Description |
+|---|---|---|
+| `telemetry` | 10 Hz (every 100ms) | Real-time EPS, p99 parse latency (µs), drops, buffer gauges |
+| `events` | Event-driven (push) | Normalized OCSF Class 4001/3001 events with BLAKE3 provenance |
+| `dlq` | Instantaneous | Quarantine alerts for unparsed perimeter payloads |
+| `hitl` | Autonomous trigger | Gatekeeper candidate rule notifications awaiting operator approval |
+
+---
+
+### Client Subscription Handshake
+
+Upon opening the WebSocket connection, the client sends a JSON subscription frame:
+
+```json
+{
+  "action": "subscribe",
+  "channels": ["telemetry", "events", "dlq", "hitl"],
+  "filter": {
+    "min_severity": "High",
+    "vendors": ["Fortinet", "Cisco ASA", "Palo Alto"]
+  }
+}
+```
+
+#### Server Acknowledgment:
+```json
+{
+  "type": "subscribed",
+  "channels": ["telemetry", "events", "dlq", "hitl"],
+  "session_id": "ws_sess_89f0a21b",
+  "timestamp": 1727443800000
+}
+```
+
+---
+
+### Streaming Message Payloads
+
+#### 1. Telemetry Frame (`channel: telemetry`)
+```json
+{
+  "type": "telemetry_update",
+  "timestamp": 1727443800100,
+  "data": {
+    "eps": 13290,
+    "processed_total": 1054000,
+    "dropped_total": 0,
+    "dlq_active": 0,
+    "latency_p99_us": 13.47,
+    "buffer_utilization_pct": 24.2,
+    "merkle_root": "5ade96bb788957a6e147cf7914bdcfb6038e2d427d11bf430b501ab1a129d20c",
+    "vendor_rates": {
+      "fortinet_eps": 5800,
+      "cisco_eps": 4100,
+      "paloalto_eps": 3390
+    }
+  }
+}
+```
+
+#### 2. Normalized Event Frame (`channel: events`)
+```json
+{
+  "type": "ocsf_event",
+  "category_uid": 4,
+  "class_uid": 4001,
+  "class_name": "Network Activity",
+  "activity_id": 1,
+  "activity_name": "Allow",
+  "severity_id": 2,
+  "src_endpoint": { "ip": "198.51.100.42", "port": 52341 },
+  "dst_endpoint": { "ip": "10.0.5.50", "port": 443 },
+  "metadata": {
+    "provenance_hash": "b3_5ade96bb788957a6e147cf7914bdcfb6",
+    "merkle_leaf_index": 48201,
+    "vault_chunk": "/vault/chunk_20260927_0042.parquet",
+    "vrl_rule": "fortigate_ocsf4001.vrl",
+    "sec_65b_certified": true
+  }
+}
+```
+
+#### 3. DLQ Quarantine Notification (`channel: dlq`)
+```json
+{
+  "type": "dlq_alert",
+  "dlq_id": "dlq_4f92a10b",
+  "timestamp": "2026-09-27T12:57:41.104Z",
+  "reason": "HEURISTIC_ROUTER_UNMATCHED",
+  "raw_payload_preview": "<13>Sep 27 12:57:41 firewall kernel: [DROPPED] IN=eth0...",
+  "clustering_status": "queued_for_drain3"
+}
+```
+
+#### 4. Gatekeeper HitL Notification (`channel: hitl`)
+```json
+{
+  "type": "gatekeeper_candidate",
+  "rule_id": "rule_firewall_8a8ab357",
+  "device_type": "Firewall",
+  "suggested_ocsf_class": 4001,
+  "confidence_score": 0.96,
+  "status": "pending_approval",
+  "hotkeys": { "approve": "a", "reject": "r", "preview": "p" }
+}
+```
+
+---
+
+### Heartbeat & Reconnection Protocol
+- **Ping / Pong**: The server transmits `{ "type": "ping" }` every 5,000ms. The client must reply with `{ "type": "pong" }` within 2,500ms to keep the connection alive.
+- **Auto-Reconnect**: Recommended exponential backoff (`initial: 500ms`, `max: 5000ms`, `factor: 1.5`) when running behind unstable field relays.
+
+---
+
+### Client Implementation Examples
+
+#### JavaScript / TypeScript (Browser SOC Console)
+```typescript
+const socket = new WebSocket('ws://localhost:5173/ws/telemetry');
+
+socket.onopen = () => {
+  console.log('Connected to PRISM WebSocket Gateway');
+  socket.send(JSON.stringify({
+    action: 'subscribe',
+    channels: ['telemetry', 'events', 'dlq', 'hitl']
+  }));
+};
+
+socket.onmessage = (event) => {
+  const msg = JSON.parse(event.data);
+  if (msg.type === 'telemetry_update') {
+    updateGauges(msg.data.eps, msg.data.latency_p99_us);
+  } else if (msg.type === 'ocsf_event') {
+    appendLedgerRow(msg);
+  } else if (msg.type === 'gatekeeper_candidate') {
+    notifyOperatorModal(msg);
+  }
+};
+```
+
+#### Python (`websockets` Client)
+```python
+import asyncio
+import json
+import websockets
+
+async def stream_prism_telemetry():
+    uri = "ws://127.0.0.1:8080/ws/telemetry"
+    async with websockets.connect(uri) as ws:
+        await ws.send(json.dumps({
+            "action": "subscribe",
+            "channels": ["telemetry", "dlq"]
+        }))
+        async for message in ws:
+            payload = json.loads(message)
+            print(f"[{payload.get('type')}] EPS: {payload.get('data', {}).get('eps')}")
+
+if __name__ == "__main__":
+    asyncio.run(stream_prism_telemetry())
+```
+
