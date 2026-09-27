@@ -2,39 +2,53 @@
 
 ## 1. Production Deployment Topology
 
-### Single-Node Bare-Metal Topology
+<p align="center">
+  <img src="images/deployment_topology.png" alt="PRISM Production Deployment Topology" width="100%">
+</p>
+
+### Single-Node Bare-Metal Topology (ADR-01)
 ```
-[Perimeter Firewalls / Gateways]
-       │  UDP/TCP port 514
+[Perimeter Firewalls / Gateways (Fortinet, Cisco ASA, Palo Alto, Linux Syslog)]
+       │  UDP/TCP port 514 (Kernel SO_REUSEPORT)
        ▼
-┌────────────────────────────────────────────────────────┐
-│  PRISM High-Performance Host (8+ Cores, 16GB+ RAM)    │
-│                                                        │
-│  ┌─────────────────────────┐  ┌──────────────────────┐ │
-│  │   prism (Rust binary)   │  │ prism-brain (Python) │ │
-│  │   • Ingestion Worker    │  │ • Drain Clustering  │ │
-│  │   • Provenance Vault    │  │ • Laya ModernBERT   │ │
-│  │   • VRL Normalizer      │  │ • VRL Synthesizer   │ │
-│  │   • DLQ Reparser        │  │ • Gatekeeper State   │ │
-│  └────────────┬────────────┘  └──────────┬───────────┘ │
-│               │                          │             │
-│               └───────────┬──────────────┘             │
-│                           ▼                            │
-│                 /data/prism (NVMe/SSD)                 │
-│                 ├── /vault (ZSTD Parquet)              │
-│                 ├── /rules (*.vrl)                     │
-│                 └── ledger.log (Merkle Signatures)     │
-└───────────────────────────┬────────────────────────────┘
-                            │ HTTP Bulk Sink (OCSF JSON)
-                            ▼
-              [Elasticsearch / OpenSearch / Kafka]
+┌────────────────────────────────────────────────────────────────────────┐
+│  PRISM High-Performance Host (8+ Cores, 16GB+ RAM, NVMe Storage)       │
+│                                                                        │
+│  ┌─────────────────────────────┐      ┌──────────────────────────────┐ │
+│  │     prism (Rust Binary)     │      │   prism-brain (Python SLM)   │ │
+│  │   • Ingestion Workers (514) │      │   • Drain3 Tree Clustering   │ │
+│  │   • SIMD Heuristic Router   │◄────►│   • Laya ModernBERT (421M)   │ │
+│  │   • VRL Normalizer (Hot)    │      │   • VRL Synthesizer & Scorer │ │
+│  │   • BLAKE3 Merkle Vault     │      │   • Gatekeeper HitL Queue    │ │
+│  │   • Automated DLQ Reparser  │      │   • Inotify Watcher Loop     │ │
+│  └──────────────┬──────────────┘      └──────────────┬───────────────┘ │
+│                 │                                    │                 │
+│                 └──────────────────┬─────────────────┘                 │
+│                                    ▼                                   │
+│                         /data/prism (NVMe / SSD)                       │
+│                         ├── /vault (ZSTD Compressed Chunks)            │
+│                         ├── /rules (*.vrl Dynamic Rules)               │
+│                         ├── /rule_metadata (*.json States)             │
+│                         └── /vault/ledger.log (Merkle 65B Checkpoints) │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │ HTTP Bulk Sink (OCSF JSON)
+                                     ▼
+                [Elasticsearch / OpenSearch / Kafka / Parquet]
 ```
 
 ---
 
-## 2. Linux Kernel Optimization & Socket Tuning
+## 2. End-to-End Data Pipeline Architecture
 
-To guarantee lossless ingestion at >100,000 EPS without buffer overflow, apply the following sysctl settings:
+<p align="center">
+  <img src="images/data_flow_diagram.png" alt="PRISM End-to-End Data Flow" width="100%">
+</p>
+
+---
+
+## 3. Linux Kernel Optimization & Socket Tuning
+
+To guarantee lossless ingestion at >100,000 EPS without buffer overflow, apply the following kernel socket parameters:
 
 ```bash
 # /etc/sysctl.d/99-prism.conf
@@ -58,7 +72,7 @@ sudo sysctl --system
 
 ---
 
-## 3. Air-Gapped High-Security Operations
+## 4. Air-Gapped High-Security Operations
 
 PRISM is purpose-built to operate in strictly air-gapped environments without any external internet connectivity.
 
@@ -76,7 +90,7 @@ PRISM is purpose-built to operate in strictly air-gapped environments without an
 
 ---
 
-## 4. Kubernetes Deployment Manifest
+## 5. Kubernetes Production Deployment Manifest
 
 ```yaml
 apiVersion: apps/v1

@@ -15,8 +15,30 @@ import { ExecutiveBriefing, type SystemScenario } from './components/ExecutiveBr
 import { DashboardExplainerModal } from './components/DashboardExplainerModal';
 
 export function App() {
-  const [currentView, setCurrentView] = useState<DashboardView>('command');
-  const [theme, setTheme] = useState<DashboardTheme>('dark');
+  const getInitialView = (): DashboardView => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const v = params.get('view');
+      if (v && ['command', 'pipeline', 'analytics', 'tactical', 'gatekeeper', 'dlq', 'accounting', 'vrl'].includes(v)) {
+        return v as DashboardView;
+      }
+    } catch {}
+    return 'command';
+  };
+
+  const getInitialTheme = (): DashboardTheme => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('theme');
+      if (t && ['dark', 'cyber', 'light'].includes(t)) {
+        return t as DashboardTheme;
+      }
+    } catch {}
+    return 'dark';
+  };
+
+  const [currentView, setCurrentView] = useState<DashboardView>(getInitialView);
+  const [theme, setTheme] = useState<DashboardTheme>(getInitialTheme);
   const [isLiveStreaming, setIsLiveStreaming] = useState<boolean>(true);
   const [scenario, setScenario] = useState<SystemScenario>('baseline');
   const [isExplainerOpen, setIsExplainerOpen] = useState<boolean>(false);
