@@ -60,3 +60,25 @@ To build for production:
 npm run build
 npm run preview
 ```
+
+---
+
+## ⚡ Live Backend Bridge & WebSocket Streaming
+
+The PRISM frontend supports dual operational ingestion modes:
+
+### 1. High-Performance WebSocket Streaming (`ws://localhost:5173/ws/telemetry`)
+In production and connected deployments, the dashboard establishes a full-duplex WebSocket connection to stream:
+- **10Hz Telemetry & Ingestion Rates**: Live EPS counters, p99 parsing latency (µs), and buffer utilization.
+- **OCSF Egress Stream**: Real-time push of normalized Class 4001/3001/5001 events with BLAKE3 hashes and Merkle leaf indexes.
+- **Quarantine DLQ Alerts**: Instant visual notifications when an unmatched perimeter log triggers the autonomous AI loop.
+- **Gatekeeper Staging Push**: Automatic operator alerts when Laya ModernBERT synthesizes candidate VRL rules.
+
+### 2. Standalone Air-Gapped Simulation & Polling Bridge
+When operating disconnected or in evaluation demonstrations without live syslog feeds:
+- The **Streaming / Paused** toggle in the header controls a high-frequency internal telemetry generator.
+- The **Live Backend Bridge** (`LiveBackendBridge.tsx`) continuously polls `/api/real/*` endpoints, detecting whether PRISM's Rust data plane (`/tmp/prism_metrics.json`) is running.
+- In-memory event ring buffers maintain up to 50 active OCSF records and 20 historical throughput points with zero DOM lag.
+
+For comprehensive REST endpoint schemas, JSON payloads, and WebSocket subscription specifications, see **[PRISM REST API & Web Command Center Specification](../docs/API.md)**.
+

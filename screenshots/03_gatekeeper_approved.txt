@@ -2,11 +2,11 @@
 ║  [1] Dashboard   |   [2] Telemetry   |   [3] Gatekeeper (HitL)   |   [4] DLQ Explorer                                ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ╭ AI PARSERS - HITL APPROVAL QUEUE ────────────╮╭ RULE PREVIEW & DRY-RUN OUTPUT ───────────────────────────────────────╮
-│>>  ✅ APPROVED  ✓ [Firewall] rule_firewall_8a││Rule ID: rule_firewall_8a8ab357                                       │
+│>>  ✅ APPROVED  ✓ [Firewall] rule_firewall_9d││Rule ID: rule_firewall_9d3e5201                                       │
 │                                              ││Device: Firewall                                                      │
-│                                              ││Signature: auto_firewall_1790514556                                   │
+│                                              ││Signature: auto_firewall_1790518648                                   │
 │                                              ││State: APPROVED                                                       │
-│                                              ││Created: 2026-09-27 13:09:16                                          │
+│                                              ││Created: 2026-09-27 14:17:28                                          │
 │                                              ││                                                                      │
 │                                              ││--- VRL CODE ---                                                      │
 │                                              ││.class_uid = 4001                                                     │
