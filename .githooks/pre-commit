@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec "$(git rev-parse --show-toplevel)/scripts/pre_commit_check.sh"
+exec "$(git rev-parse --show-toplevel)/scripts/pre_commit_check.sh" "$@"

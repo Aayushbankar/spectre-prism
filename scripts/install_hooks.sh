@@ -8,7 +8,7 @@ mkdir -p "$REPO_ROOT/.git/hooks"
 
 cat << 'EOF' > "$REPO_ROOT/.githooks/pre-commit"
 #!/usr/bin/env bash
-exec "$(git rev-parse --show-toplevel)/scripts/pre_commit_check.sh"
+exec "$(git rev-parse --show-toplevel)/scripts/pre_commit_check.sh" "$@"
 EOF
 
 chmod +x "$REPO_ROOT/.githooks/pre-commit"
