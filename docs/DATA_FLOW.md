@@ -2,6 +2,13 @@
 
 ## 1. High-Level Architecture Flow
 
+<p align="center">
+  <img src="images/data_flow_diagram.png" alt="PRISM Data Flow Diagram" width="100%">
+</p>
+
+<details open>
+<summary><b>🔍 View Data Flow Diagram Mermaid Source</b></summary>
+
 ```mermaid
 flowchart TD
     subgraph INGESTION["1. Ingestion Plane (Zero-Copy)"]
@@ -66,6 +73,7 @@ flowchart TD
         REPARSER -->|Replay Stored Raw Payloads| VRL
     end
 ```
+</details>
 
 ---
 
