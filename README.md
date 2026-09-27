@@ -1,5 +1,5 @@
 # PRISM: Universal Log Parsing & Normalization Framework
-### Smart India Hackathon 2026 — Problem Statement PS-26156 (NTRO)
+### Smart India Hackathon 2026 — Problem Statement \#26156 (NTRO)
 
 [![CI Pipeline](https://github.com/Aayushbankar/spectre-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/Aayushbankar/spectre-prism/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/Rust-1.97.1-blue.svg)](https://rust-lang.org)
@@ -36,7 +36,7 @@ cargo test --workspace --lib 2>&1 | grep "test result" && cd prism-brain && pyth
 
 ```mermaid
 flowchart TD
-    subgraph INGEST["Plane 1: Ingestion Plane (Zero-Copy)"]
+    subgraph INGEST["Ingestion Plane (Zero-Copy)"]
         UDP["UDP Syslog (SO_REUSEPORT)"]
         TCP["TCP Syslog (RFC 5424)"]
         FILE["File Ingest (Inotify)"]
@@ -46,7 +46,7 @@ flowchart TD
         FILE --> DISPATCH
     end
 
-    subgraph PROVENANCE["Plane 4: Provenance Plane (SIMD & Crypto)"]
+    subgraph PROVENANCE["Provenance Plane (SIMD & Crypto)"]
         BLAKE3["BLAKE3 Hasher (Zero-Copy SIMD)"]
         VAULT["ZSTD Compressed Vault"]
         MERKLE["RFC 6962 Merkle Tree"]
@@ -57,7 +57,7 @@ flowchart TD
         MERKLE --> WITNESS
     end
 
-    subgraph DATAPLANE["Plane 2: Data Normalization Plane"]
+    subgraph DATAPLANE["Data Normalization Plane"]
         ROUTER{"Heuristic Router\n(SIMD Byte Match)"}
         VRL["In-Memory VRL Engine (Hot-Reload)"]
         OCSF["Dynamic OCSF Normalizer (4001, 3001, 5001, 8001)"]
@@ -70,7 +70,7 @@ flowchart TD
         ACCOUNT --> SINK
     end
 
-    subgraph CONTROL["Plane 3: Autonomous AI Control Plane (HitL)"]
+    subgraph CONTROL["Autonomous AI Control Plane (HitL)"]
         DLQ["Quarantine DLQ (/vault/dlq_*.log)"]
         DRAIN["Drain3 Clustering (Tree Depth & Masking)"]
         LAYA["Laya ModernBERT-large (421M Params)"]
@@ -84,7 +84,7 @@ flowchart TD
         REPARSER -->|Replay Stored Raw Payloads| VRL
     end
 
-    subgraph PRESENT["Plane 5: Presentation & Governance Plane"]
+    subgraph PRESENT["Presentation & Governance Plane"]
         TUI["Prism Ratatui TUI"]
         WEB["React Sovereign Command Center"]
         GATEKEEPER["Gatekeeper Staging Queue"]
@@ -97,7 +97,7 @@ flowchart TD
 
 ---
 
-## 📊 Real Runtime Metrics (Verified Proofs)
+## 📊 Live Runtime Metrics (Verified Proofs)
 
 | Metric | Value | Verification Proof |
 |---|---|---|
@@ -110,6 +110,9 @@ flowchart TD
 | **Forensic Integrity Proofs** | **PASS** | RFC 6962 Merkle Tree: `cargo test -p prism-merkle` |
 | **Section 65B Witness Quorum** | **PASS** | 2-of-3 Ed25519 cosigning: `cargo test -p prism-provenance witness` |
 | **DLQ Zero-Downtime Reparsing** | **100% Success** | Full backlog reprocessed on rule approval |
+
+### Live Metrics Dashboard
+![PRISM Live Metrics Dashboard](docs/demo/05_final_dashboard.png)
 
 ---
 
