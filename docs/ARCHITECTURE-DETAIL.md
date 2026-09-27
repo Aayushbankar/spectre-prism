@@ -6,6 +6,84 @@
   <img src="images/deployment_topology.png" alt="PRISM Production Deployment Topology" width="100%">
 </p>
 
+<details>
+<summary><b>🔍 View Deployment Topology Mermaid Source</b></summary>
+
+```mermaid
+flowchart TB
+    subgraph SOURCES["Perimeter & Defense Infrastructure"]
+        FW1["FortiGate Core Firewalls"]
+        FW2["Cisco ASA VPN Gateways"]
+        FW3["Palo Alto Next-Gen Firewalls"]
+        EP["Linux / Windows Endpoints (Inotify)"]
+        FW1 -->|"UDP 514"| NIC
+        FW2 -->|"UDP 514"| NIC
+        FW3 -->|"TCP 514"| NIC
+        EP -->|"Direct / Inotify"| NIC
+    end
+
+    subgraph HOST["PRISM Air-Gapped Appliance (Bare-Metal / Distroless)"]
+        NIC["NIC / Kernel Socket Ring (SO_REUSEPORT / 64MB Buffer)"]
+
+        subgraph RUST["PRISM Data Plane (Rust - Zero-Copy)"]
+            INGEST["Ingest Workers (Amortized Buffer Pool)"]
+            ROUTER["SIMD Heuristic Router (memchr)"]
+            VRL_ENG["VRL Normalizer (Hot-Reload)"]
+            REPARSER["Automated DLQ Reparser"]
+            INGEST --> ROUTER
+            ROUTER -->|"Fast Path"| VRL_ENG
+            REPARSER -->|"Backlog Replay"| VRL_ENG
+        end
+
+        subgraph PROV["Provenance & Cryptographic Engine"]
+            SIMD_HASH["SIMD BLAKE3 Hasher"]
+            VAULT["ZSTD Compressed Vault"]
+            MERKLE_TREE["RFC 6962 Merkle Tree Engine"]
+            WITNESS_QUORUM["Section 65B Witness (2-of-3 Ed25519)"]
+            INGEST --> SIMD_HASH
+            SIMD_HASH --> VAULT
+            SIMD_HASH --> MERKLE_TREE
+            MERKLE_TREE --> WITNESS_QUORUM
+        end
+
+        subgraph PYTHON["PRISM AI Brain (Python Control Plane)"]
+            DLQ_STORE["Quarantined DLQ Spool"]
+            DRAIN3["Drain3 Tree Clustering"]
+            LAYA_BERT["Laya ModernBERT-large (421M Weights)"]
+            VRL_SYNTH["VRL Synthesis & Scorer"]
+            GATEKEEPER["Gatekeeper Staging Queue"]
+            ROUTER -->|"Slow Path (Unknown)"| DLQ_STORE
+            DLQ_STORE --> DRAIN3
+            DRAIN3 --> LAYA_BERT
+            LAYA_BERT --> VRL_SYNTH
+            VRL_SYNTH --> GATEKEEPER
+            GATEKEEPER -->|"Atomic Write /rules"| VRL_ENG
+            GATEKEEPER -->|"Signal Reparse"| REPARSER
+        end
+
+        NIC --> INGEST
+    end
+
+    subgraph PRESENTATION["Presentation & Operator Control"]
+        TUI["Prism Ratatui TUI (Local/SSH Console)"]
+        WEB["React Sovereign SOC Command Center"]
+        GATEKEEPER <-->|"Approve / Reject ('a')"| TUI
+        GATEKEEPER <-->|"Approve / Reject"| WEB
+    end
+
+    subgraph DOWNSTREAM["Downstream SIEM & Storage Infrastructure"]
+        ES["Elasticsearch / OpenSearch Cluster"]
+        KAFKA["Enterprise Kafka Broker"]
+        PARQUET["Immutable Parquet Cold Storage"]
+        AUDIT["Section 65B Certified Forensic Ledger"]
+        VRL_ENG -->|"Bulk OCSF JSON"| ES
+        VRL_ENG -->|"Stream Events"| KAFKA
+        VAULT --> PARQUET
+        WITNESS_QUORUM --> AUDIT
+    end
+```
+</details>
+
 ### Single-Node Bare-Metal Topology (ADR-01)
 ```
 [Perimeter Firewalls / Gateways (Fortinet, Cisco ASA, Palo Alto, Linux Syslog)]
@@ -43,6 +121,53 @@
 <p align="center">
   <img src="images/data_flow_diagram.png" alt="PRISM End-to-End Data Flow" width="100%">
 </p>
+
+<details>
+<summary><b>🔍 View Data Flow Diagram Mermaid Source</b></summary>
+
+```mermaid
+flowchart TD
+    classDef step fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#f8fafc;
+    classDef branch fill:#0f172a,stroke:#f59e0b,stroke-width:2px,color:#fbbf24;
+    classDef success fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#a7f3d0;
+    classDef alert fill:#450a0a,stroke:#ef4444,stroke-width:2px,color:#fca5a5;
+
+    S1["Step 1: Wire-Speed Ingest\nUDP 514 / TCP / File Tailer\nZero-Copy BytesMut Ring Buffer"]:::step
+    S2["Step 2: Cryptographic Provenance\nSIMD BLAKE3 Hash & Immutable ZSTD Vault"]:::step
+    S3["Step 3: Forensic Ledger & Witness\nRFC 6962 Merkle Batching & 2-of-3 Ed25519 Quorum"]:::step
+    
+    ROUTER{"Step 4: SIMD Heuristic Router\nPattern Match (devname, %ASA, CSV)"}:::branch
+
+    S1 --> S2
+    S2 --> S3
+    S1 --> ROUTER
+
+    VRL["Step 5a: Fast Path - In-Memory VRL\nHot-Reload Bytecode Execution"]:::step
+    OCSF["Step 6a: Dynamic OCSF Normalization\nClasses 4001, 3001, 5001, 8001"]:::step
+    ACCOUNT["Step 7a: Byte Accounting Verification\nClosure Ratio > 95% Guarantee"]:::success
+    SINK["Step 8a: High-Speed Egress Sink\nElasticsearch Bulk / Parquet Vault"]:::step
+
+    ROUTER -->|Matched Signature| VRL
+    VRL --> OCSF
+    OCSF --> ACCOUNT
+    ACCOUNT --> SINK
+
+    DLQ["Step 5b: Slow Path - DLQ Isolation\nQuarantine Raw Payload (/vault/dlq_*.log)"]:::alert
+    DRAIN["Step 6b: Autonomous Drain3 Clustering\nTree Depth & Parameter Masking"]:::step
+    LAYA["Step 7b: Laya ModernBERT-large (421M)\nSchema Classification & VRL Synthesis"]:::step
+    GATEKEEPER["Step 8b: Gatekeeper Staging Queue\nDry-Run Validation & Candidate Rules"]:::branch
+    HITL["Step 9b: Operator HitL Authorization\nRatatui TUI / React SOC (Key 'a')"]:::success
+    REPARSE["Step 10b: Hot-Reload & DLQ Reparsing\nInotify Reload + Backlog Replay into OCSF"]:::step
+
+    ROUTER -->|Unmatched / Anomaly| DLQ
+    DLQ --> DRAIN
+    DRAIN --> LAYA
+    LAYA --> GATEKEEPER
+    GATEKEEPER <-->|Audit & Approve| HITL
+    HITL -->|Promote Rule| REPARSE
+    REPARSE -->|Replay Quarantined Logs| VRL
+```
+</details>
 
 ---
 

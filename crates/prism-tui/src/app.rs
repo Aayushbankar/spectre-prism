@@ -331,6 +331,18 @@ impl App {
                                 ActiveTab::DlqViewer => ActiveTab::Dashboard,
                             };
                         }
+                        KeyCode::Char('1') => {
+                            self.active_tab = ActiveTab::Dashboard;
+                        }
+                        KeyCode::Char('2') => {
+                            self.active_tab = ActiveTab::Telemetry;
+                        }
+                        KeyCode::Char('3') => {
+                            self.active_tab = ActiveTab::Gatekeeper;
+                        }
+                        KeyCode::Char('4') => {
+                            self.active_tab = ActiveTab::DlqViewer;
+                        }
                         KeyCode::Down | KeyCode::Char('j') => {
                             if self.active_tab == ActiveTab::Gatekeeper {
                                 let i = match self.hitl_state.selected() {

@@ -1,0 +1,20 @@
+<166>Sep 15 2024 14:23:41 FW-CORE-01 : %ASA-6-302013: Built inbound TCP connection 2847193 for outside:198.51.100.47/52341 (198.51.100.47/52341) to inside:10.10.5.100/443 (10.10.5.100/443)
+<166>Sep 15 2024 14:23:42 FW-CORE-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.99/44521 dst inside:10.10.5.200/22 by access-group "OUTSIDE-IN" [0x8a7b3c2d, 0x00000000]
+<166>Sep 15 2024 14:23:43 FW-CORE-01 : %ASA-6-302014: Teardown TCP connection 2847193 for outside:198.51.100.47/52341 to inside:10.10.5.100/443 duration 0:00:02 bytes 1024 TCP FINs
+<166>Sep 15 2024 14:23:44 FW-CORE-01 : %ASA-6-302013: Built inbound TCP connection 2847194 for outside:198.51.100.48/52342 (198.51.100.48/52342) to inside:10.10.5.101/443 (10.10.5.101/443)
+<166>Sep 15 2024 14:23:45 FW-CORE-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.100/44522 dst inside:10.10.5.201/22 by access-group "OUTSIDE-IN" [0x8a7b3c2e, 0x00000000]
+<166>Sep 15 2024 14:23:46 FW-CORE-01 : %ASA-6-302014: Teardown TCP connection 2847194 for outside:198.51.100.48/52342 to inside:10.10.5.101/443 duration 0:00:02 bytes 2048 TCP FINs
+<166>Sep 15 2024 14:23:47 FW-CORE-01 : %ASA-6-302015: Built outbound UDP connection 2847195 for inside:10.10.5.102/52343 (10.10.5.102/52343) to outside:198.51.100.49/53 (198.51.100.49/53)
+<166>Sep 15 2024 14:23:48 FW-CORE-01 : %ASA-6-302016: Teardown UDP connection 2847195 for inside:10.10.5.102/52343 to outside:198.51.100.49/53 duration 0:00:01 bytes 128
+<166>Sep 15 2024 14:23:49 FW-CORE-01 : %ASA-6-302013: Built inbound TCP connection 2847196 for outside:198.51.100.50/52344 (198.51.100.50/52344) to inside:10.10.5.103/443 (10.10.5.103/443)
+<166>Sep 15 2024 14:23:50 FW-CORE-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.101/44523 dst inside:10.10.5.202/22 by access-group "OUTSIDE-IN" [0x8a7b3c2f, 0x00000000]
+<166>Sep 15 2024 14:23:51 FW-CORE-01 : %ASA-6-302014: Teardown TCP connection 2847196 for outside:198.51.100.50/52344 to inside:10.10.5.103/443 duration 0:00:02 bytes 4096 TCP FINs
+<166>Sep 15 2024 14:23:52 FW-CORE-01 : %ASA-6-302015: Built outbound UDP connection 2847197 for inside:10.10.5.104/52345 (10.10.5.104/52345) to outside:198.51.100.51/53 (198.51.100.51/53)
+<166>Sep 15 2024 14:23:53 FW-CORE-01 : %ASA-6-302016: Teardown UDP connection 2847197 for inside:10.10.5.104/52345 to outside:198.51.100.51/53 duration 0:00:01 bytes 256
+<166>Sep 15 2024 14:23:54 FW-CORE-01 : %ASA-6-302013: Built inbound TCP connection 2847198 for outside:198.51.100.52/52346 (198.51.100.52/52346) to inside:10.10.5.105/443 (10.10.5.105/443)
+<166>Sep 15 2024 14:23:55 FW-CORE-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.102/44524 dst inside:10.10.5.203/22 by access-group "OUTSIDE-IN" [0x8a7b3c30, 0x00000000]
+<166>Sep 15 2024 14:23:56 FW-CORE-01 : %ASA-6-302014: Teardown TCP connection 2847198 for outside:198.51.100.52/52346 to inside:10.10.5.105/443 duration 0:00:02 bytes 8192 TCP FINs
+<166>Sep 15 2024 14:23:57 FW-CORE-01 : %ASA-6-302015: Built outbound UDP connection 2847199 for inside:10.10.5.106/52347 (10.10.5.106/52347) to outside:198.51.100.53/53 (198.51.100.53/53)
+<166>Sep 15 2024 14:23:58 FW-CORE-01 : %ASA-6-302016: Teardown UDP connection 2847199 for inside:10.10.5.106/52347 to outside:198.51.100.53/53 duration 0:00:01 bytes 512
+<166>Sep 15 2024 14:23:59 FW-CORE-01 : %ASA-6-302013: Built inbound TCP connection 2847200 for outside:198.51.100.54/52348 (198.51.100.54/52348) to inside:10.10.5.107/443 (10.10.5.107/443)
+<166>Sep 15 2024 14:24:00 FW-CORE-01 : %ASA-4-106023: Deny tcp src outside:203.0.113.103/44525 dst inside:10.10.5.204/22 by access-group "OUTSIDE-IN" [0x8a7b3c31, 0x00000000]

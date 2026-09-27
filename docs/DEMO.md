@@ -43,7 +43,7 @@ The background AI Brain (`prism-brain`) detects newly quarantined logs in the DL
 
 | Gatekeeper Parameter | Candidate Value | Technical Details |
 |---|---|---|
-| **Rule ID** | `rule_firewall_f0db3ca5` | Unique deterministic identifier |
+| **Rule ID** | `rule_firewall_8a8ab357` | Unique deterministic identifier |
 | **Inferred Device** | `Firewall` | Classified by Laya ModernBERT |
 | **Target OCSF Class** | `4001` (Network Activity) | Dynamically selected based on semantic intent |
 | **VRL Engine State** | `PENDING` | Sandboxed dry-run passed; awaiting operator review |
@@ -144,6 +144,8 @@ In addition to the terminal console, PRISM includes a high-performance **React S
   <img src="images/dashboard_tactical.png" alt="Global Threat Vector Map" width="100%">
 </p>
 
+> For complete endpoint documentation, curl examples, JSON request/response schemas, and build/run steps for the web console, see **[PRISM REST API & Web Command Center Specification](API.md)**.
+
 ---
 
 ## 📼 5. Terminal Recording & Reproduction
@@ -176,3 +178,28 @@ This script launches the release binaries, spawns a tmux session, streams real p
 | **Hot-reload does not fire** | Inotify watches exceeded on the host OS | Run `sudo sysctl fs.inotify.max_user_watches=524288` |
 | **Merkle audit verification fail** | Mutated byte in cold storage vault | Run `cargo test -p prism-provenance test_integrity_plane_mutation_fails` |
 | **Frontend dev server port conflict** | Port 5173 occupied | Launch on custom port: `cd frontend && npm run dev -- --port 3000` |
+
+### Diagnostic Walkthrough 1: Ingestion Socket Collision & Recovery
+When a previous run leaves a dangling socket listener, PRISM outputs an `os error 98` error. Inspect the socket using `fuser`, cleanly terminate the rogue process with `pkill`, and restart the daemon:
+
+<p align="center">
+  <img src="images/troubleshooting_port_conflict.png" alt="Troubleshooting Port Collision" width="100%">
+</p>
+
+---
+
+### Diagnostic Walkthrough 2: Quarantined DLQ Inspection & Raw Provenance
+If unparsed events are routed to the DLQ, inspect raw payloads, BLAKE3 cryptographic hashes, and triage status directly using `jq` on `/tmp/prism/vault/dlq_*.log`:
+
+<p align="center">
+  <img src="images/troubleshooting_dlq_inspection.png" alt="Troubleshooting DLQ Inspection" width="100%">
+</p>
+
+---
+
+### Diagnostic Walkthrough 3: Cryptographic Merkle Tamper Detection & Audit
+If bytes within the raw immutable vault are maliciously modified or corrupted on disk, PRISM's RFC 6962 Merkle verification fails, and Section 65B cosigners immediately withhold endorsement:
+
+<p align="center">
+  <img src="images/troubleshooting_merkle_audit.png" alt="Troubleshooting Merkle Tamper Detection" width="100%">
+</p>

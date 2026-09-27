@@ -18,9 +18,24 @@ export function App() {
   const getInitialView = (): DashboardView => {
     try {
       const params = new URLSearchParams(window.location.search);
-      const v = params.get('view');
-      if (v && ['command', 'pipeline', 'analytics', 'tactical', 'gatekeeper', 'dlq', 'accounting', 'vrl'].includes(v)) {
-        return v as DashboardView;
+      const v = params.get('view')?.toLowerCase();
+      const viewMap: Record<string, DashboardView> = {
+        command: 'command',
+        flow: 'flow',
+        pipeline: 'flow',
+        analytics: 'analytics',
+        threats: 'threats',
+        tactical: 'threats',
+        radar: 'threats',
+        accounting: 'accounting',
+        vault: 'accounting',
+        gatekeeper: 'gatekeeper',
+        hitl: 'gatekeeper',
+        dlq: 'dlq',
+        vrl: 'vrl',
+      };
+      if (v && viewMap[v]) {
+        return viewMap[v];
       }
     } catch {}
     return 'command';

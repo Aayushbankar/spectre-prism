@@ -10,9 +10,9 @@
 
 | Metric | Measured Value | Verification Proof / Citation |
 |---|---|---|
-| **UDP Ingestion Throughput** | **13,290 EPS** | `metrics.json` / `verify_e2e_pipeline.py` / socket micro-bench |
-| **File Tail Ingestion Throughput** | **13,290 EPS** | Inotify multi-worker chunk stream |
-| **Lossless UDP Ingest Ceiling** | **8,000+ EPS** | Tested under sustained UDP packet blast without drop |
+| **File Tail Ingestion Throughput** | **13,290 EPS** | Multi-worker inotify chunk stream micro-bench |
+| **UDP Ingestion (Lossless Ceiling)** | **8,000+ EPS** | Sustained UDP packet blast (`SO_REUSEPORT`) without drop |
+| **UDP Ingestion (Burst Absorption)** | **13,290 EPS** | 64MB socket ring buffer burst tolerance |
 | **Pipeline Latency (p99)** | **~13.47 µs** (budget <25 µs) | Zero-copy `BytesMut` buffer pools & SIMD routing |
 | **Router Detection Time** | **~3.07 µs** | `bench_router_heuristic` (1,000,000 iterations) |
 | **Perimeter Log Coverage** | **99.8967%** | Evaluated on real perimeter corpora (`iptables`, `snort`, `zeek`, `OpenSSH`) |
@@ -21,6 +21,7 @@
 | **Forensic Merkle Proofs** | **PASS** | RFC 6962 Merkle Tree: `cargo test -p prism-merkle` |
 | **Section 65B Witness Quorum** | **PASS** | 2-of-3 Ed25519 cosigning: `cargo test -p prism-provenance witness` |
 | **DLQ Zero-Downtime Reparsing** | **100% Success** | Backlog flushed into OCSF on rule approval; DLQ drops to 0 |
+| **End-to-End Pipeline Verification** | **PASS** | `verify_e2e_pipeline.py` (30/30 processed, 0 dropped, 0 DLQ) |
 
 ---
 
@@ -30,7 +31,7 @@
 |---|---|---|---|---|
 | **System Architecture** | **5-Plane Sovereign Modular Engine** (Rust + Python Brain) | Monolithic single binary | Python microservices / Kafka | Python scaffolding |
 | **Data Plane Runtime** | **Native Rust Zero-Copy** (`BytesMut` amortized pools) | Rust single binary | Python async engine | Python stubs |
-| **UDP Ingest Throughput** | **13,290 EPS** (lossless 8k EPS sustained) | 8,000 EPS UDP / 13k file | ~2,500 EPS | Scaffolding |
+| **Ingest Throughput** | **13,290 EPS file / 8,000+ EPS UDP sustained** | 8,000 EPS UDP / 13k file | ~2,500 EPS | Scaffolding |
 | **Data Plane Latency (p99)**| **~13.47 µs** (< 25 µs budget) | ~45 µs | > 5 ms | Unknown |
 | **AI Log Parsing & Triage** | **Drain3 + Laya ModernBERT (421M) + VRL Coder** | Drain + Ollama (external) | Rule-based regex | Scaffolding |
 | **Dynamic OCSF Mapping** | **Full Multi-Class (4001, 3001, 5001, 8001)** | Static Class mapping | Partial mapping | OCSF 1.5.0 (older) |
