@@ -41,12 +41,14 @@ yarn-error.log*
 
 # Local logs, test outputs, & runtime storage
 *.log
+!data/samples/*.log
 dlq.log
 /var/run/prism/
 /storage/
 /vault/
 /cold_vault/
-/data/
+/data/*
+!/data/samples/
 /scratch/
 *.parquet
 test_vault_*
@@ -66,7 +68,6 @@ root_ledger.json
 .DS_Store
 Thumbs.db
 *.bak
-*.log
 *.jsonl
 fix_*.py
 update_*.py

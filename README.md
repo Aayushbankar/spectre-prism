@@ -112,8 +112,8 @@ flowchart TD
 
 | Metric | Measured Value | Verification Proof / Command |
 |---|---|---|
-| **UDP Ingest Throughput** | **13,290 EPS** | `python3 verify_e2e_pipeline.py` & `metrics.json` |
-| **Lossless Ingest Ceiling** | **8,000+ EPS** | Tested under sustained UDP blast without drop |
+| **File Tail Ingest Throughput** | **13,290 EPS** | Multi-worker chunk stream (`metrics.json` benchmark) |
+| **UDP Ingest Sustained Ceiling** | **8,000+ EPS** | Lossless UDP packet blast (`SO_REUSEPORT`) |
 | **Pipeline Latency (p99)** | **~13.47 µs** (budget <25 µs) | Zero-copy `BytesMut` buffer pools & SIMD routing |
 | **Router Detection Latency**| **~3.07 µs** | `cargo test -p prism-core bench_router_heuristic` |
 | **Perimeter Log Coverage** | **99.8967%** | Evaluated on real perimeter corpora (`iptables`, `snort`, `zeek`, `OpenSSH`) |
@@ -123,9 +123,9 @@ flowchart TD
 | **Section 65B Witness Quorum**| **PASS** | 2-of-3 Ed25519 cosigning: `cargo test -p prism-provenance witness` |
 | **DLQ Zero-Downtime Reparsing**| **100% Success** | Backlog reprocessed on rule approval; DLQ drops to 0 |
 
-### Live Metrics Dashboard
+### Live Telemetry & Engine Performance (10Hz Real-Time TUI)
 <p align="center">
-  <img src="docs/demo/05_final_dashboard.png" alt="PRISM Live Metrics Dashboard" width="100%">
+  <img src="docs/demo/06_telemetry_metrics.png" alt="PRISM Live Telemetry and Latency Metrics" width="100%">
 </p>
 
 ---
@@ -213,7 +213,7 @@ PRISM also provides an enterprise web console built with **React 19, TypeScript,
 |---|---|---|---|
 | **System Architecture** | **5-Plane Sovereign Modular Engine** (Rust + Python Brain) | Monolithic single binary | Python microservices / Kafka |
 | **Ingestion Engine** | **SIMD Zero-Copy `BytesMut` Buffer Pools** (`SO_REUSEPORT`) | Standard socket loop | Async socket collector |
-| **Throughput (UDP Syslog)** | **13,290 EPS** (lossless 8k EPS sustained) | 8,000 EPS UDP / 13k file | ~2,500 EPS |
+| **Ingest Throughput** | **13,290 EPS file / 8,000+ EPS UDP sustained** | 8,000 EPS UDP / 13k file | ~2,500 EPS |
 | **Data Plane Latency (p99)**| **~13.47 µs** (< 25 µs budget) | ~45 µs | > 5 ms |
 | **AI Log Parsing** | **Drain3 + Laya ModernBERT (421M) + VRL Coder** | Drain + Ollama (external) | Rule-based regex |
 | **OCSF Normalization** | **Dynamic Multi-Class (4001, 3001, 5001, 8001)** | Static Class mapping | Partial mapping |
@@ -251,6 +251,7 @@ PRISM also provides an enterprise web console built with **React 19, TypeScript,
 - **[Detailed Engineering & Deployment](docs/ARCHITECTURE-DETAIL.md)** — Production topology, kernel tuning, and Kubernetes specs.
 - **[Data Flow Specification](docs/DATA_FLOW.md)** — In-depth component communication diagrams and IPC protocols.
 - **[Runtime Metrics & Ledger](docs/METRICS.md)** — Full benchmark comparisons, hardware profiles, and test citations.
+- **[REST API & Web Console Guide](docs/API.md)** — 8 REST endpoints with curl examples and frontend build guides.
 - **[Requirements Traceability Matrix](docs/PS26156_TRACEABILITY.md)** — Detailed mapping against all PS-26156 clauses.
 - **[Dataset Disclaimer (MANDATORY)](docs/DATASETS.md)** — Research corpora citations and privacy compliance.
 - **[Production Operations Guide](docs/OPERATIONS.md)** — Deployment topology, air-gap guides, and kernel socket tuning.
