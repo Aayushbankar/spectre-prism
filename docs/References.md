@@ -2,6 +2,8 @@
 
 Full citation list supporting the architecture and design decisions in PRISM (SIH26156).
 
+> **Academic Publication Notice:** For the formal, publication-ready IEEE style bibliography and BibTeX archive, see **[`docs/REFERENCES_IEEE.md`](file:///c:/Users/BAPS/spectre-prism/docs/REFERENCES_IEEE.md)**.
+
 ---
 
 ## 1. Algorithmic & Mathematical Foundations
