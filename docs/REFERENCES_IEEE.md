@@ -4,7 +4,7 @@
 **Problem Statement:** Smart India Hackathon (SIH) — PS 26156 (NTRO / High-Throughput Log Pre-processing)  
 **Team:** SPECTRE  
 **Specification:** IEEE Citation & Documentation Reference Style (IEEE Editorial Style Manual)  
-**Companion Document:** [`docs/References.md`](file:///c:/Users/BAPS/spectre-prism/docs/References.md) | [`docs/CITATIONS.md`](file:///c:/Users/BAPS/spectre-prism/docs/CITATIONS.md)
+**Companion Document:** [`docs/References.md`](./References.md) | [`docs/CITATIONS.md`](./CITATIONS.md)
 
 ---
 
@@ -106,39 +106,39 @@ This section groups each IEEE reference into its functional domain within PRISM,
 
 | Citation | Reference Title & Source | Plane / Module | Implementation & Technical Impact |
 |:---|:---|:---|:---|
-| **$[1]$** | **Drain: Online Log Parsing with Fixed Depth Tree**<br>He *et al.*, *IEEE ICWS 2017* | Control Plane<br>[`prism-brain/cluster.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/cluster.py) | Employs depth-bounded parse trees to compress alien Dead Letter Queue (DLQ) bursts into static templates in $O(n)$ linear time, preventing SLM prompt token overflow. |
-| **$[2]$** | **LogCrisp: Fast Aggregated Analysis**<br>Wei *et al.*, *USENIX ATC 2025* | Data Plane<br>[`crates/prism-router`](file:///c:/Users/BAPS/spectre-prism/crates/prism-router) | Justifies AVX2/AVX-512 SIMD vectorization for header extraction and vendor heuristic dispatch at wire speed (1.18 GB/s). |
-| **$[3]$** | **KELP: Evolutionary Grouping Trees**<br>Singh & Ramachandran, *arXiv:2601.00633* | Ingestion Plane<br>[`crates/prism-network`](file:///c:/Users/BAPS/spectre-prism/crates/prism-network) | Provides zero-copy buffer architecture using amortized byte slices, bounding total memory consumption to $<50\text{ MB}$ under 50k EPS loads. |
-| **$[4]$** | **Thompson DFA Regex Search Algorithm**<br>Thompson, *Commun. ACM 1968* | Data Plane<br>[`crates/prism-vrl`](file:///c:/Users/BAPS/spectre-prism/crates/prism-vrl) | Eliminates exponential backtrack vulnerabilities (ReDoS), guaranteeing strictly bounded deterministic execution per packet. |
-| **$[5]$** | **simdjson: Parsing Gigabytes per Second**<br>Langdale & Lemire, *VLDB J. 2021* | Data Plane<br>[`crates/prism-parser`](file:///c:/Users/BAPS/spectre-prism/crates/prism-parser) | Establishes the parallel bit-index validation paradigm for rapid structural JSON decoding without pointer indirection. |
+| **$[1]$** | **Drain: Online Log Parsing with Fixed Depth Tree**<br>He *et al.*, *IEEE ICWS 2017* | Control Plane<br>[`prism-brain/cluster`](../prism-brain/cluster/cluster.py) & [`crates/prism-drain`](../crates/prism-drain) | Employs depth-bounded parse trees to compress alien Dead Letter Queue (DLQ) bursts into static templates in $O(n)$ linear time, preventing SLM prompt token overflow. |
+| **$[2]$** | **LogCrisp: Fast Aggregated Analysis**<br>Wei *et al.*, *USENIX ATC 2025* | Data Plane<br>[`crates/prism-core`](../crates/prism-core) | Justifies AVX2/AVX-512 SIMD vectorization for header extraction and vendor heuristic dispatch at wire speed (1.18 GB/s). |
+| **$[3]$** | **KELP: Evolutionary Grouping Trees**<br>Singh & Ramachandran, *arXiv:2601.00633* | Ingestion Plane<br>[`crates/prism-ingest`](../crates/prism-ingest) | Provides zero-copy buffer architecture using amortized byte slices, bounding total memory consumption to $<50\text{ MB}$ under 50k EPS loads. |
+| **$[4]$** | **Thompson DFA Regex Search Algorithm**<br>Thompson, *Commun. ACM 1968* | Data Plane<br>[`crates/prism-vrl-generator`](../crates/prism-vrl-generator) | Eliminates exponential backtrack vulnerabilities (ReDoS), guaranteeing strictly bounded deterministic execution per packet. |
+| **$[5]$** | **simdjson: Parsing Gigabytes per Second**<br>Langdale & Lemire, *VLDB J. 2021* | Data Plane<br>[`crates/prism-core`](../crates/prism-core) | Establishes the parallel bit-index validation paradigm for rapid structural JSON decoding without pointer indirection. |
 
 ### Section B: Generative AI & Parsing Synthesis
 
 | Citation | Reference Title & Source | Plane / Module | Implementation & Technical Impact |
 |:---|:---|:---|:---|
-| **$[6]$** | **DivLog: In-Context Log Parsing**<br>Xu *et al.*, *IEEE/ACM ICSE 2024* | Control Plane<br>[`prism-brain/coder.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/coder.py) | Formulates prompt-engineered log rule generation using few-shot in-context learning, achieving 98.1% schema fidelity without fine-tuning. |
-| **$[7]$** | **Laya: ModernBERT Log Classification**<br>ConvAI Innovations, *arXiv:2503.23303* | Control Plane<br>[`prism-brain/classifier.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/classifier.py) | Acts as the deterministic "System 1" gatekeeper; classifies unknown log archetypes with 0.766 accuracy and expected calibration error (ECE) of 0.081. |
-| **$[8]$** | **llama.cpp: Fast C/C++ Inference**<br>Gerganov *et al.*, *GitHub 2023* | Control Plane<br>[`prism-brain/server.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/server.py) | Deploys quantized Q4 GGUF models on air-gapped CPU nodes, producing Vector Remap Language (VRL) code at 104–130 tokens/second without cloud dependencies. |
+| **$[6]$** | **DivLog: In-Context Log Parsing**<br>Xu *et al.*, *IEEE/ACM ICSE 2024* | Control Plane<br>[`prism-brain/coder`](../prism-brain/coder/coder.py) | Formulates prompt-engineered log rule generation using few-shot in-context learning, achieving 98.1% schema fidelity without fine-tuning. |
+| **$[7]$** | **Laya: ModernBERT Log Classification**<br>ConvAI Innovations, *arXiv:2503.23303* | Control Plane<br>[`prism-brain/triage`](../prism-brain/triage/triage.py) | Acts as the deterministic "System 1" gatekeeper; classifies unknown log archetypes with 0.766 accuracy and expected calibration error (ECE) of 0.081. |
+| **$[8]$** | **llama.cpp: Fast C/C++ Inference**<br>Gerganov *et al.*, *GitHub 2023* | Control Plane<br>[`prism-brain/main.py`](../prism-brain/main.py) | Deploys quantized Q4 GGUF models on air-gapped CPU nodes, producing Vector Remap Language (VRL) code at 104–130 tokens/second without cloud dependencies. |
 
 ### Section C: Cryptographic Provenance, Chain of Custody & Legal Mandates
 
 | Citation | Reference Title & Source | Plane / Module | Implementation & Technical Impact |
 |:---|:---|:---|:---|
-| **$[9]$** | **BLAKE3 Cryptographic Hash**<br>O'Connor *et al.*, *IACR ePrint 2020/463* | Integrity Plane<br>[`crates/prism-crypto`](file:///c:/Users/BAPS/spectre-prism/crates/prism-crypto) | Line-rate cryptographic tree hashing across CPU SIMD cores, computing immutable digest fingerprints over raw network frames upon ingress. |
-| **$[10]$** | **CERT-In Directions No. 20(3)/2022**<br>CERT-In / MeitY, *GoI Statutory Order* | Integrity Plane<br>[`crates/prism-storage`](file:///c:/Users/BAPS/spectre-prism/crates/prism-storage) | Enforces 180-day secure chronological log retention and supports rapid investigation within the mandatory 6-hour incident disclosure window. |
-| **$[11]$** | **Bharatiya Sakshya Adhiniyam (BSA) Sec. 63**<br>Ministry of Law & Justice, *Act 47 of 2023* | Integrity Plane<br>[`crates/prism-integrity`](file:///c:/Users/BAPS/spectre-prism/crates/prism-integrity) | Successor to Section 65B of Indian Evidence Act 1872; establishes legal evidence admissibility through cryptographically verified hash trees. |
+| **$[9]$** | **BLAKE3 Cryptographic Hash**<br>O'Connor *et al.*, *IACR ePrint 2020/463* | Integrity Plane<br>[`crates/prism-provenance`](../crates/prism-provenance) | Line-rate cryptographic tree hashing across CPU SIMD cores, computing immutable digest fingerprints over raw network frames upon ingress. |
+| **$[10]$** | **CERT-In Directions No. 20(3)/2022**<br>CERT-In / MeitY, *GoI Statutory Order* | Integrity Plane<br>[`crates/prism-provenance`](../crates/prism-provenance) | Enforces 180-day secure chronological log retention and supports rapid investigation within the mandatory 6-hour incident disclosure window. |
+| **$[11]$** | **Bharatiya Sakshya Adhiniyam (BSA) Sec. 63**<br>Ministry of Law & Justice, *Act 47 of 2023* | Integrity Plane<br>[`crates/prism-merkle`](../crates/prism-merkle) | Successor to Section 65B of Indian Evidence Act 1872; establishes legal evidence admissibility through cryptographically verified hash trees. |
 
 ### Section D: Open Standards, Serialization & System Frameworks
 
 | Citation | Reference Title & Source | Plane / Module | Implementation & Technical Impact |
 |:---|:---|:---|:---|
-| **$[12]$** | **OCSF Schema Specification v1.3.0 / v1.9.0**<br>OCSF Working Group, *Linux Foundation* | Data Plane<br>[`rules/schemas/ocsf`](file:///c:/Users/BAPS/spectre-prism/rules/schemas) | Universal semantic target. Normalizes Fortinet, Cisco, and Palo Alto telemetry into Class 4001 (*Network Activity*) and Class 3001 (*Authentication*). |
-| **$[13]$** | **Vector Remap Language (VRL)**<br>Datadog / Vector, *Reference Spec* | Data Plane<br>[`rules/vrl/`](file:///c:/Users/BAPS/spectre-prism/rules/vrl) | Provides memory-safe, non-halting domain-specific expressions for zero-cost field mutation and structure transformation. |
-| **$[14]$** | **Apache Parquet Columnar Format**<br>Apache Software Foundation, *Spec 2023* | Integrity Plane<br>[`crates/prism-storage`](file:///c:/Users/BAPS/spectre-prism/crates/prism-storage) | Columnar storage for long-term compressed log vaults, yielding up to $10\times$ compression ratios and sub-second analytical scans. |
-| **$[15]$** | **Zstandard Compression (RFC 8878)**<br>Collet & Kucherawy, *IETF RFC 8878* | Storage / Network<br>[`crates/prism-storage`](file:///c:/Users/BAPS/spectre-prism/crates/prism-storage) | Real-time block compression maximizing disk I/O throughput while reducing long-term retention footprint. |
-| **$[16]$** | **rs_merkle Rust Library**<br>Guzun, *crates.io 2023* | Integrity Plane<br>[`crates/prism-crypto`](file:///c:/Users/BAPS/spectre-prism/crates/prism-crypto) | Generates Merkle roots for batches of up to $2^{16}$ events, emitting compact cryptographic multi-proofs for forensic verification. |
-| **$[17]$** | **Ratatui Terminal UI Framework**<br>Ratatui Contributors, *2024* | Operator Interface<br>[`crates/prism-tui`](file:///c:/Users/BAPS/spectre-prism/crates/prism-tui) | Low-overhead 4-pane real-time terminal operations dashboard displaying ingress rates, DLQ state, and pipeline health. |
-| **$[22]$** | **Syslog Protocol (RFC 5424)**<br>Gerhards, *IETF RFC 5424* | Ingestion Plane<br>[`crates/prism-network`](file:///c:/Users/BAPS/spectre-prism/crates/prism-network) | Formal framing specification for structured and unstructured UDP/TCP perimeter syslog feeds. |
+| **$[12]$** | **OCSF Schema Specification v1.3.0 / v1.9.0**<br>OCSF Working Group, *Linux Foundation* | Data Plane<br>[`rules`](../rules) | Universal semantic target. Normalizes Fortinet, Cisco, and Palo Alto telemetry into Class 4001 (*Network Activity*) and Class 3001 (*Authentication*). |
+| **$[13]$** | **Vector Remap Language (VRL)**<br>Datadog / Vector, *Reference Spec* | Data Plane<br>[`rules`](../rules) & [`crates/prism-vrl-generator`](../crates/prism-vrl-generator) | Provides memory-safe, non-halting domain-specific expressions for zero-cost field mutation and structure transformation. |
+| **$[14]$** | **Apache Parquet Columnar Format**<br>Apache Software Foundation, *Spec 2023* | Integrity Plane<br>[`crates/prism-provenance`](../crates/prism-provenance) | Columnar storage for long-term compressed log vaults, yielding up to $10\times$ compression ratios and sub-second analytical scans. |
+| **$[15]$** | **Zstandard Compression (RFC 8878)**<br>Collet & Kucherawy, *IETF RFC 8878* | Storage / Network<br>[`crates/prism-provenance`](../crates/prism-provenance) | Real-time block compression maximizing disk I/O throughput while reducing long-term retention footprint. |
+| **$[16]$** | **rs_merkle Rust Library**<br>Guzun, *crates.io 2023* | Integrity Plane<br>[`crates/prism-merkle`](../crates/prism-merkle) | Generates Merkle roots for batches of up to $2^{16}$ events, emitting compact cryptographic multi-proofs for forensic verification. |
+| **$[17]$** | **Ratatui Terminal UI Framework**<br>Ratatui Contributors, *2024* | Operator Interface<br>[`crates/prism-tui`](../crates/prism-tui) | Low-overhead 4-pane real-time terminal operations dashboard displaying ingress rates, DLQ state, and pipeline health. |
+| **$[22]$** | **Syslog Protocol (RFC 5424)**<br>Gerhards, *IETF RFC 5424* | Ingestion Plane<br>[`crates/prism-ingest`](../crates/prism-ingest) | Formal framing specification for structured and unstructured UDP/TCP perimeter syslog feeds. |
 
 ### Section E: Cybersecurity Datasets & Empirical Evaluation
 
@@ -157,21 +157,21 @@ This table maps how citations should be invoked across technical documentation, 
 
 | Topic / Claim | Formal IEEE In-Text Citation | Associated PRISM Code / Component |
 |:---|:---|:---|
-| Online log clustering in $O(n)$ time | He *et al.* $[1]$ | [`prism-brain/cluster.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/cluster.py) |
-| SIMD acceleration & wire-speed pattern matching | Wei *et al.* $[2]$, Langdale and Lemire $[5]$ | [`crates/prism-router`](file:///c:/Users/BAPS/spectre-prism/crates/prism-router) |
-| Amortized zero-copy buffer allocation | Singh and Ramachandran $[3]$ | [`crates/prism-network`](file:///c:/Users/BAPS/spectre-prism/crates/prism-network) |
-| ReDoS mitigation & linear time DFA routing | Thompson $[4]$ | [`crates/prism-vrl`](file:///c:/Users/BAPS/spectre-prism/crates/prism-vrl) |
-| In-context parser code synthesis | Xu *et al.* $[6]$, Gerganov *et al.* $[8]$ | [`prism-brain/coder.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/coder.py) |
-| Hallucination-free semantic classification | ConvAI Innovations $[7]$ | [`prism-brain/classifier.py`](file:///c:/Users/BAPS/spectre-prism/prism-brain/classifier.py) |
-| Cryptographic provenance & tree hashing | O'Connor *et al.* $[9]$, Guzun $[16]$ | [`crates/prism-crypto`](file:///c:/Users/BAPS/spectre-prism/crates/prism-crypto) |
-| Regulatory compliance (180 days retention) | CERT-In $[10]$ | [`crates/prism-storage`](file:///c:/Users/BAPS/spectre-prism/crates/prism-storage) |
-| Legal evidentiary admissibility in Indian courts | Bharatiya Sakshya Adhiniyam, Sec. 63 $[11]$ | [`crates/prism-integrity`](file:///c:/Users/BAPS/spectre-prism/crates/prism-integrity) |
-| Schema normalization & taxonomy | OCSF Working Group $[12]$ | [`rules/schemas/`](file:///c:/Users/BAPS/spectre-prism/rules/schemas) |
-| Safe sandboxed log transformation | Datadog $[13]$ | [`rules/vrl/`](file:///c:/Users/BAPS/spectre-prism/rules/vrl) |
-| Compressed columnar vault storage | Apache Foundation $[14]$, Collet and Kucherawy $[15]$ | [`crates/prism-storage`](file:///c:/Users/BAPS/spectre-prism/crates/prism-storage) |
-| Terminal operator interface | Ratatui Developers $[17]$ | [`crates/prism-tui`](file:///c:/Users/BAPS/spectre-prism/crates/prism-tui) |
-| Empirical benchmark evaluation datasets | Moustafa and Slay $[18]$, Sharafaldin *et al.* $[19]$, Zhu *et al.* $[20]$, Landauer *et al.* $[21]$ | [`data/`](file:///c:/Users/BAPS/spectre-prism/data) |
-| Protocol framing | Gerhards $[22]$ | [`crates/prism-network`](file:///c:/Users/BAPS/spectre-prism/crates/prism-network) |
+| Online log clustering in $O(n)$ time | He *et al.* $[1]$ | [`prism-brain/cluster`](../prism-brain/cluster/cluster.py) & [`crates/prism-drain`](../crates/prism-drain) |
+| SIMD acceleration & wire-speed pattern matching | Wei *et al.* $[2]$, Langdale and Lemire $[5]$ | [`crates/prism-core`](../crates/prism-core) |
+| Amortized zero-copy buffer allocation | Singh and Ramachandran $[3]$ | [`crates/prism-ingest`](../crates/prism-ingest) |
+| ReDoS mitigation & linear time DFA routing | Thompson $[4]$ | [`crates/prism-vrl-generator`](../crates/prism-vrl-generator) |
+| In-context parser code synthesis | Xu *et al.* $[6]$, Gerganov *et al.* $[8]$ | [`prism-brain/coder`](../prism-brain/coder/coder.py) |
+| Hallucination-free semantic classification | ConvAI Innovations $[7]$ | [`prism-brain/triage`](../prism-brain/triage/triage.py) |
+| Cryptographic provenance & tree hashing | O'Connor *et al.* $[9]$, Guzun $[16]$ | [`crates/prism-provenance`](../crates/prism-provenance) & [`crates/prism-merkle`](../crates/prism-merkle) |
+| Regulatory compliance (180 days retention) | CERT-In $[10]$ | [`crates/prism-provenance`](../crates/prism-provenance) |
+| Legal evidentiary admissibility in Indian courts | Bharatiya Sakshya Adhiniyam, Sec. 63 $[11]$ | [`crates/prism-merkle`](../crates/prism-merkle) |
+| Schema normalization & taxonomy | OCSF Working Group $[12]$ | [`rules`](../rules) |
+| Safe sandboxed log transformation | Datadog $[13]$ | [`rules`](../rules) & [`crates/prism-vrl-generator`](../crates/prism-vrl-generator) |
+| Compressed columnar vault storage | Apache Foundation $[14]$, Collet and Kucherawy $[15]$ | [`crates/prism-provenance`](../crates/prism-provenance) |
+| Terminal operator interface | Ratatui Developers $[17]$ | [`crates/prism-tui`](../crates/prism-tui) |
+| Empirical benchmark evaluation datasets | Moustafa and Slay $[18]$, Sharafaldin *et al.* $[19]$, Zhu *et al.* $[20]$, Landauer *et al.* $[21]$ | [`data`](../data) |
+| Protocol framing | Gerhards $[22]$ | [`crates/prism-ingest`](../crates/prism-ingest) |
 
 ---
 
