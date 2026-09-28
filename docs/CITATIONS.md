@@ -2,7 +2,7 @@
 
 This document provides a detailed academic and technical bibliography for all algorithms, models, datasets, and libraries used within the PRISM framework for SIH PS 26156.
 
-> **IEEE Citation Standard:** For the formal IEEE formatted bibliography, numerical cross-reference matrix, and BibTeX database, see **[`docs/REFERENCES_IEEE.md`](file:///c:/Users/BAPS/spectre-prism/docs/REFERENCES_IEEE.md)**.
+> **IEEE Citation Standard:** For the formal IEEE formatted bibliography, numerical cross-reference matrix, and BibTeX database, see **[`docs/REFERENCES_IEEE.md`](./REFERENCES_IEEE.md)**.
 
 ## Academic Papers & Algorithms
 
