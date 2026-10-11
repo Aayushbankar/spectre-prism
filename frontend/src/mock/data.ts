@@ -1,5 +1,9 @@
 import type { KPIMetric, OCSFEvent, SankeyNode, SankeyLink, GeoThreatPoint } from '../types';
 
+// Demo placeholder dataset for offline UI development.
+// These values are static UI fixtures and are NOT measured pipeline benchmarks.
+// Live telemetry comes from /tmp/prism_metrics.json via LiveBackendBridge when the backend runs.
+
 export const INITIAL_SUMMARY = {
   totalRequests: 2669410,
   uniqueVisitors: 1420,

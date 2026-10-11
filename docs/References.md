@@ -91,4 +91,4 @@ Full citation list supporting the architecture and design decisions in PRISM (SI
 
 ---
 
-*Compiled for Team Spectre GPG — SIH26156, Universal Log Pre-processing Framework (PRISM).*
+*Compiled for PRISM — Universal Log Pre-processing Framework.*

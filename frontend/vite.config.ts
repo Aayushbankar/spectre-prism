@@ -434,7 +434,7 @@ function prismBackendApi(): Plugin {
             witnesses: [
               {
                 id: 'witness-1',
-                name: 'NTRO National Ingest Gateway Node',
+                name: 'Primary Ingest Gateway Node',
                 key: 'ed25519:7a4f91b0e352c841dc8399a2fe1480d193ba74112c48e',
                 status: 'SIGNED',
                 signature: 'sig:99b8214f8a9e102d8471c2b5...',
@@ -442,7 +442,7 @@ function prismBackendApi(): Plugin {
               },
               {
                 id: 'witness-2',
-                name: 'CERT-In Incident Verification Node',
+                name: 'Secondary Verification Node',
                 key: 'ed25519:92bfe1048ca721019d846612ec9471ab492817492c103',
                 status: 'SIGNED',
                 signature: 'sig:41da883921fe82910cba4839...',
@@ -450,7 +450,7 @@ function prismBackendApi(): Plugin {
               },
               {
                 id: 'witness-3',
-                name: 'Judiciary Forensic Cold Ledger Node',
+                name: 'Cold Ledger Archive Node',
                 key: 'ed25519:3819dc7721ab89420084710129bc7418902148721c499',
                 status: 'STANDBY',
                 signature: null,

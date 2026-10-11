@@ -318,8 +318,8 @@ async fn main() -> anyhow::Result<()> {
                 let c_cnt = cisco_count.load(Ordering::Relaxed);
                 let p_cnt = paloalto_count.load(Ordering::Relaxed);
                 
-                // Add fake latency parsing jitter 15-35 microseconds since it's so fast
-                let lat_us = 0; // Disabled until real latency tracking is implemented
+                // Latency tracking: reported as 0 until histogram instrumentation lands.
+                let lat_us = 0;
                 
                 let stats = format!(r#"{{"eps": {}, "processed": {}, "drops": {}, "dlq": {}, "telemetry": {{"fortinet": {}, "cisco": {}, "paloalto": {}, "latency_us": {}}}}}"#, 
                                      eps, current_processed, drops, current_dlq, f_cnt, c_cnt, p_cnt, lat_us);

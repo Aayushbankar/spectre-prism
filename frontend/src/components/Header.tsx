@@ -203,7 +203,7 @@ export const Header: React.FC<Props> = ({
               </div>
             </div>
             <div className="hidden xl:block text-left text-xs leading-tight">
-              <div className="font-bold text-slate-200">NTRO SecOps</div>
+              <div className="font-bold text-slate-200">SOC Operator</div>
               <div className="text-[10px] text-slate-400">Chief Operator</div>
             </div>
           </div>

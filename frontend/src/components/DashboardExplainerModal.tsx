@@ -35,7 +35,7 @@ export const DashboardExplainerModal: React.FC<Props> = ({ isOpen, onClose }) =>
                 PRISM Sovereign SOC · Architecture & Operational Guide
               </h2>
               <p className="text-xs text-slate-400">
-                Universal Ingestion, Semantic Normalization & Section 65B Legal Evidence Engine (SIH PS-26156 / NTRO)
+                Universal Ingestion, Semantic Normalization & Evidence Integrity Engine
               </p>
             </div>
           </div>
@@ -103,7 +103,7 @@ export const DashboardExplainerModal: React.FC<Props> = ({ isOpen, onClose }) =>
                 <FileCheck2 className="w-4 h-4" /> 4. Vault Plane (Section 65B Evidence)
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                Cold storage in Apache Parquet 2.0 with ZSTD compression + cryptographic BLAKE3 Merkle Trees + 2-of-3 Ed25519 witness quorum (NTRO, CERT-In, Judiciary) providing legal chain-of-custody.
+                Cold storage in Apache Parquet 2.0 with ZSTD compression + cryptographic BLAKE3 Merkle Trees + 2-of-3 Ed25519 witness quorum providing verifiable chain-of-custody.
               </p>
             </div>
           </div>

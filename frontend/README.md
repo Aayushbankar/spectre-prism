@@ -1,8 +1,8 @@
-# PRISM Frontend Dashboard · SIH PS 26156
+# PRISM Frontend Dashboard
 
-A high-performance, real-time observability and telemetry dashboard engineered for the **PRISM Universal Log Parsing Framework** (Smart India Hackathon 2026, Problem Statement 26156).
+A high-performance, real-time observability and telemetry dashboard for the **PRISM Universal Log Parsing Framework**.
 
-This dashboard seamlessly adapts and synthesizes all three reference designs into a unified, responsive interface:
+This dashboard unifies multiple reference designs into a single responsive interface:
 
 ---
 

@@ -1,5 +1,4 @@
 # PRISM: Universal Log Parsing & Normalization Framework
-### Smart India Hackathon 2026 — Problem Statement \#26156 (NTRO)
 
 [![CI Pipeline](https://github.com/Aayushbankar/spectre-prism/actions/workflows/ci.yml/badge.svg)](https://github.com/Aayushbankar/spectre-prism/actions/workflows/ci.yml)
 [![Rust](https://img.shields.io/badge/Rust-1.97.1-blue.svg)](https://rust-lang.org)
@@ -21,7 +20,7 @@
 
 ---
 
-## ⚡ Quick Evaluation (For SIH Judges & Reviewers)
+## ⚡ Quick Evaluation
 
 ### One-Command Full Evaluator
 ```bash
@@ -207,26 +206,7 @@ PRISM also provides an enterprise web console built with **React 19, TypeScript,
 
 ---
 
-## 🏆 Competitive Benchmark Comparison (PRISM vs framework vs Competitors)
-
-| Benchmark Dimension | **PRISM (SPECTRE)** | **framework (contributor)** | **reference-dashboard (contributor)** |
-|---|---|---|---|
-| **System Architecture** | **5-Plane Sovereign Modular Engine** (Rust + Python Brain) | Monolithic single binary | Python microservices / Kafka |
-| **Ingestion Engine** | **SIMD Zero-Copy `BytesMut` Buffer Pools** (`SO_REUSEPORT`) | Standard socket loop | Async socket collector |
-| **Ingest Throughput** | **13,290 EPS file / 8,000+ EPS UDP sustained** | 8,000 EPS UDP / 13k file | ~2,500 EPS |
-| **Data Plane Latency (p99)**| **~13.47 µs** (< 25 µs budget) | ~45 µs | > 5 ms |
-| **AI Log Parsing** | **Drain3 + Laya ModernBERT (421M) + VRL Coder** | Drain + Ollama (external) | Rule-based regex |
-| **OCSF Normalization** | **Dynamic Multi-Class (4001, 3001, 5001, 8001)** | Static Class mapping | Partial mapping |
-| **Byte Accounting Closure** | **> 95% Verified Mathematical Guarantee** | Not implemented | Not implemented |
-| **Forensic History** | **SIMD BLAKE3 + RFC 6962 Merkle + 2-of-3 Witness** | Single Ed25519 key | SHA-256 (no quorum) |
-| **Section 65B Quorum** | **2-of-3 Ed25519 Cosigning Quorum** (Legally Admissible) | Single signature (repudiable) | None |
-| **Human-in-the-Loop UX** | **Dual Console: Ratatui TUI + React SOC Command Center** | Embedded Web UI | CLI only |
-| **Zero-Downtime Reparsing** | **Inotify Hot-Reload + Automated DLQ Backlog Reparse** | CLI manual command | Manual replay |
-| **Air-Gap Capability** | **100% Offline (distroless container, local weights)** | Offline binary | Docker with external deps |
-
----
-
-## 🎯 SIH PS-26156 Compliance Matrix
+## 🎯 Problem Requirements Compliance Matrix
 
 | PS Req | Description | PRISM Status | Architectural Component | Verification Command |
 |---|---|---|---|---|
@@ -259,5 +239,5 @@ PRISM also provides an enterprise web console built with **React 19, TypeScript,
 
 ---
 
-## 👥 SPECTRE Team
-- **Aayush Bankar** & SPECTRE Team (SIH 2026 PS-26156)
+## 👥 Team
+- **Aayush Bankar** & Team

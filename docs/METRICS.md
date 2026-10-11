@@ -1,6 +1,6 @@
 # PRISM — Real Runtime Metrics & Benchmark Ledger
 
-**Project:** PRISM SIH26156 NTRO framework | **Team:** SPECTRE | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` `python 3.11.16` `drain3 0.9.11 laya 0.3.16` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core — CPU-only `device:cpu`
+**Project:** PRISM | **Host:** `hpelitebook840g5 7.1.8-arch1-3 x86_64` | **Toolchain:** `rustc 1.97.1 cargo 1.97.1` `python 3.11.16` `drain3 0.9.11 laya 0.3.16` | **Mode:** Bare-metal (ADR_01) — no Docker, single 8-core — CPU-only `device:cpu`
 
 > This ledger records **real, executed** metrics with citations to datasets, commits, and test harnesses. All numbers reflect real runs verified across `cargo test --workspace --lib` (47/47 Rust tests passed) + `pytest prism-brain/tests` (29 passed, 1 skipped) + `verify_e2e_pipeline.py`.
 
@@ -25,25 +25,6 @@
 
 ---
 
-## 🏆 0.1 Benchmark Comparison Matrix (PRISM vs framework vs Competitors)
-
-| Benchmark Dimension | **PRISM (SPECTRE)** | **framework (contributor)** | **reference-dashboard (contributor)** | **reference-project (contributor)** |
-|---|---|---|---|---|
-| **System Architecture** | **5-Plane Sovereign Modular Engine** (Rust + Python Brain) | Monolithic single binary | Python microservices / Kafka | Python scaffolding |
-| **Data Plane Runtime** | **Native Rust Zero-Copy** (`BytesMut` amortized pools) | Rust single binary | Python async engine | Python stubs |
-| **Ingest Throughput** | **13,290 EPS file / 8,000+ EPS UDP sustained** | 8,000 EPS UDP / 13k file | ~2,500 EPS | Scaffolding |
-| **Data Plane Latency (p99)**| **~13.47 µs** (< 25 µs budget) | ~45 µs | > 5 ms | Unknown |
-| **AI Log Parsing & Triage** | **Drain3 + Laya ModernBERT (421M) + VRL Coder** | Drain + Ollama (external) | Rule-based regex | Scaffolding |
-| **Dynamic OCSF Mapping** | **Full Multi-Class (4001, 3001, 5001, 8001)** | Static Class mapping | Partial mapping | OCSF 1.5.0 (older) |
-| **Byte Accounting Closure** | **> 95% Mathematical Guarantee** (`closure_ratio`) | Not implemented | Not implemented | Not implemented |
-| **Cryptographic History**| **SIMD BLAKE3 + RFC 6962 Merkle + 2-of-3 Witness** | Single Ed25519 key | SHA-256 (no quorum) | SHA-256 (bronze/silver) |
-| **Section 65B Forensic Quorum**| **2-of-3 Ed25519 Cosigning Quorum** (Legally Admissible) | Single signature (repudiable) | None | None |
-| **Human-in-the-Loop UX** | **Dual Console: Ratatui TUI + React SOC Command Center** | Embedded Web UI | CLI only | None |
-| **Zero-Downtime Reparsing** | **Inotify Hot-Reload + Automated DLQ Backlog Reparse** | CLI manual command | Manual replay | Not implemented |
-| **Air-Gap Capability** | **100% Offline (distroless container, local weights)** | Offline binary | Docker with external deps | Incomplete |
-
----
-
 ## 💻 0.2 Certified Hardware Specifications Table
 
 All benchmarks and latency profiles were measured on the following bare-metal test appliance:
@@ -60,7 +41,7 @@ All benchmarks and latency profiles were measured on the following bare-metal te
 
 ---
 
-## ⚡ 0.3 Proof Commands (For SIH Judges & Evaluators)
+## ⚡ 0.3 Proof Commands (For Evaluators)
 
 Evaluators can directly reproduce and verify all metrics using these turnkey commands:
 

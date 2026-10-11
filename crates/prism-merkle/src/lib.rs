@@ -1,6 +1,6 @@
 //! PRISM Merkle Tree with 2-of-3 Ed25519 Witness Cosigning (RFC 6962)
 //!
-//! Based on framework's RFC 6962 implementation with added 2-of-3 Witness Cosigning.
+//! RFC 6962 compliant Merkle tree with added 2-of-3 Witness Cosigning.
 
 use ed25519_dalek::{SigningKey, VerifyingKey, Signature, Verifier, Signer};
 use rand::rngs::OsRng;

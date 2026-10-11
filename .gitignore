@@ -54,6 +54,8 @@ dlq.log
 test_vault_*
 ledger.log
 root_ledger.json
+metrics.json
+/tmp/
 
 # Environment & Secrets
 .env

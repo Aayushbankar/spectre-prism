@@ -73,7 +73,7 @@ export const Sidebar: React.FC<Props> = ({ currentView, onViewChange, theme, onT
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold tracking-tight text-base text-white">PRISM</span>
               <span className="text-[9px] uppercase font-bold tracking-widest text-cyan-300 bg-cyan-950/90 px-1.5 py-0.5 rounded border border-cyan-800">
-                NTRO SOC
+                SOC
               </span>
             </div>
             <p className="text-[10px] text-slate-400 font-mono tracking-tight">Sovereign Defense Engine</p>

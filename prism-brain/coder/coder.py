@@ -17,72 +17,124 @@ logger = logging.getLogger(__name__)
 VRL_EXAMPLES = {
     "Network Activity": '''
 # Network Activity (class_uid=4001)
-.message = parse_syslog!(.message)
-.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
 .class_uid = 4001
 .category_uid = 4
 .type_uid = 400101
-.src_endpoint.ip = .ip
-.dst_endpoint.ip = .ip
+m_src, err = parse_regex(string!(.message), r'SRC=(?P<src>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .src_endpoint.ip = m_src.src
+}
+m_dst, err = parse_regex(string!(.message), r'DST=(?P<dst>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .dst_endpoint.ip = m_dst.dst
+}
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  if .src_endpoint.ip == null {
+    .src_endpoint.ip = m_ip.ip
+  }
+  if .dst_endpoint.ip == null {
+    .dst_endpoint.ip = m_ip.ip
+  }
+}
+''',
+    "Firewall": '''
+# Firewall (class_uid=4001)
+.class_uid = 4001
+.category_uid = 4
+.type_uid = 400101
+m_src, err = parse_regex(string!(.message), r'SRC=(?P<src>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .src_endpoint.ip = m_src.src
+}
+m_dst, err = parse_regex(string!(.message), r'DST=(?P<dst>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .dst_endpoint.ip = m_dst.dst
+}
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  if .src_endpoint.ip == null {
+    .src_endpoint.ip = m_ip.ip
+  }
+  if .dst_endpoint.ip == null {
+    .dst_endpoint.ip = m_ip.ip
+  }
+}
 ''',
     "Authentication": '''
 # Authentication (class_uid=3001)
-.message = parse_syslog!(.message)
-.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
-.user = parse_regex!(string!(.message), r'user[=:]"?(?P<user>[^\\s"]+)').user
 .class_uid = 3001
 .category_uid = 3
 .type_uid = 300101
-.src_endpoint.ip = .ip
-.dst_endpoint.ip = .ip
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .src_endpoint.ip = m_ip.ip
+  .dst_endpoint.ip = m_ip.ip
+}
+m_user, err = parse_regex(string!(.message), r'user[=:]\"?(?P<user>[^\\s\"]+)')
+if err == null {
+  .user.name = m_user.user
+}
 ''',
     "Web Activity": '''
 # Web Activity (class_uid=5001)
-.message = parse_syslog!(.message)
-.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
-.url = parse_regex!(string!(.message), r'(?P<url>https?://[^\\s]+)').url
-.method = parse_regex!(string!(.message), r'(?P<method>GET|POST|PUT|DELETE|HEAD)').method
-.status = parse_regex!(string!(.message), r'(?P<status>\\d{3})').status
 .class_uid = 5001
 .category_uid = 5
 .type_uid = 500101
-.src_endpoint.ip = .ip
-.dst_endpoint.ip = .ip
-.http.request.method = .method
-.http.request.url = .url
-.http.response.status_code = .status
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .src_endpoint.ip = m_ip.ip
+  .dst_endpoint.ip = m_ip.ip
+}
+m_url, err = parse_regex(string!(.message), r'(?P<url>https?://[^\\s]+)')
+if err == null {
+  .http.request.url = m_url.url
+}
+m_method, err = parse_regex(string!(.message), r'(?P<method>GET|POST|PUT|DELETE|HEAD)')
+if err == null {
+  .http.request.method = m_method.method
+}
+m_status, err = parse_regex(string!(.message), r'(?P<status>\\d{3})')
+if err == null {
+  .http.response.status_code = to_int!(m_status.status)
+}
 ''',
     "File Activity": '''
 # File Activity (class_uid=8001)
-.message = parse_syslog!(.message)
-.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
-.file_name = parse_regex!(string!(.message), r'(?P<file>[\\w\\-. ]+\\.(exe|dll|pdf|docx?|xlsx?))').file
-.file_path = parse_regex!(string!(.message), r'(?P<path>[A-Za-z]:\\\\[^\\s]+|/[^\\s]+)').path
 .class_uid = 8001
 .category_uid = 8
 .type_uid = 800101
-.src_endpoint.ip = .ip
-.file.name = .file_name
-.file.path = .file_path
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {
+  .src_endpoint.ip = m_ip.ip
+  .dst_endpoint.ip = m_ip.ip
+}
+m_file, err = parse_regex(string!(.message), r'(?P<file>[\\w\\-. ]+\\.(?:exe|dll|pdf|docx?|xlsx?))')
+if err == null {
+  .file.name = m_file.file
+}
+m_path, err = parse_regex(string!(.message), r'(?P<path>[A-Za-z]:\\\\[^\\s]+|/[^\\s]+)')
+if err == null {
+  .file.path = m_path.path
+}
 '''
 }
 
 VRL_SYNTAX_RULES = """
 CRITICAL VRL SYNTAX RULES (MUST FOLLOW):
 1. Use `.field = value` for assignment (NOT `:=` or `=`)
-2. Use `parse_regex!(string!(.message), r'pattern')` to extract fields
-3. Access regex captures with `.capture_name` on the result
-4. Use `parse_syslog!(.message)` for syslog parsing
-5. Use `parse_json!(.message)` for JSON parsing
-6. String literals use double quotes: `"value"`
-7. Regex patterns use raw strings: `r'pattern'`
-8. Comments start with `#`
-9. NO markdown formatting - return ONLY raw VRL code
-10. Always set .class_uid, .category_uid, .type_uid as integers
-11. Use .src_endpoint.ip and .dst_endpoint.ip for network events
-12. For user fields: .user.name = "value"
-13. For HTTP: .http.request.method, .http.request.url, .http.response.status_code
-14. For files: .file.name, .file.path
+2. DO NOT assign objects to `.message` (NEVER `.message = parse_syslog!(.message)`). `.message` is already the input string.
+3. Use `m, err = parse_regex(string!(.message), r'pattern')` to extract fields safely.
+4. Check `if err == null { ... }` before accessing captured regex fields `m.field`.
+5. String literals use double quotes: "value"
+6. Regex patterns use raw strings: r'pattern'
+7. Comments start with #
+8. NO markdown formatting - return ONLY raw VRL code
+9. Always set .class_uid, .category_uid, .type_uid as integers
+10. Use .src_endpoint.ip and .dst_endpoint.ip for network events
+11. For user fields: .user.name = "value"
+12. For HTTP: .http.request.method, .http.request.url, .http.response.status_code
+13. For files: .file.name, .file.path
 """
 
 class VrlCoder:
@@ -91,7 +143,7 @@ class VrlCoder:
         coder_conf = self.config.get("coder", {})
         self.host = coder_conf.get("host", "http://127.0.0.1:8080")
         self.enabled = str(coder_conf.get("enabled", "true")).lower() == "true"
-        self.timeout = coder_conf.get("timeout", 30)
+        self.timeout = coder_conf.get("timeout", 15)
         self.model = coder_conf.get("model", "qwen2.5-coder:7b")
         self.max_retries = 3
 
@@ -103,7 +155,7 @@ class VrlCoder:
             
         for attempt in range(self.max_retries):
             vrl = self._generate_with_llm(template, device_type, attempt)
-            if vrl and self._validate_vrl(vrl):
+            if vrl and self._validate_vrl(vrl, sample_log=template):
                 logger.info(f"Coder: LLM generated valid VRL on attempt {attempt + 1}")
                 return vrl
             logger.warning(f"Coder: Attempt {attempt + 1} failed validation, retrying...")
@@ -135,10 +187,10 @@ Return ONLY the VRL code. No explanations."""
 
 PREVIOUS ATTEMPT FAILED VALIDATION. COMMON ERRORS TO AVOID:
 - Do NOT use `:=` for assignment
-- Do NOT forget `.` prefix on field names
+- Do NOT assign anything to `.message`
 - Do NOT use markdown code fences
 - MUST set .class_uid, .category_uid, .type_uid as integers
-- Use `parse_regex!(string!(.message), r'pattern').capture_name` correctly
+- Use `m, err = parse_regex(string!(.message), r'pattern')` safely
 
 EXAMPLE for {device_type}:
 {example}
@@ -149,13 +201,26 @@ Return ONLY the VRL code."""
 {VRL_SYNTAX_RULES}
 
 BARE MINIMUM TEMPLATE:
-.message = parse_syslog!(.message)
-.ip = parse_regex!(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)').ip
 .class_uid = {self._get_class_uid(device_type)}
 .category_uid = {self._get_category_uid(device_type)}
 .type_uid = {self._get_type_uid(device_type)}
-.src_endpoint.ip = .ip
-.dst_endpoint.ip = .ip
+m_src, err = parse_regex(string!(.message), r'SRC=(?P<src>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {{
+  .src_endpoint.ip = m_src.src
+}}
+m_dst, err = parse_regex(string!(.message), r'DST=(?P<dst>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {{
+  .dst_endpoint.ip = m_dst.dst
+}}
+m_ip, err = parse_regex(string!(.message), r'(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)')
+if err == null {{
+  if .src_endpoint.ip == null {{
+    .src_endpoint.ip = m_ip.ip
+  }}
+  if .dst_endpoint.ip == null {{
+    .dst_endpoint.ip = m_ip.ip
+  }}
+}}
 
 Return ONLY the VRL code above adapted for the log."""
             
@@ -199,11 +264,11 @@ Return ONLY the VRL code above adapted for the log."""
         """Clean LLM output to extract pure VRL code."""
         content = re.sub(r'```\w*\n?', '', content)
         content = re.sub(r'```', '', content)
-        content = re.sub(r'^.*?(?=\.message|\.ip|\.class_uid)', '', content, flags=re.DOTALL)
+        content = re.sub(r'^.*?(?=\.class_uid|\.message|\.ip|m_|#)', '', content, flags=re.DOTALL)
         return content.strip()
     
-    def _validate_vrl(self, vrl: str) -> bool:
-        """Basic syntactic validation of generated VRL."""
+    def _validate_vrl(self, vrl: str, sample_log: str = "") -> bool:
+        """Basic syntactic and dry-run validation of generated VRL."""
         if not vrl or len(vrl.strip()) < 20:
             return False
             
@@ -213,7 +278,7 @@ Return ONLY the VRL code above adapted for the log."""
                 logger.warning(f"VRL validation failed: missing {req}")
                 return False
                 
-        forbidden = [':=', '```', '```vrl', '```rust', '#!/usr']
+        forbidden = [':=', '```', '```vrl', '```rust', '#!/usr', '.message = parse_syslog']
         for forbid in forbidden:
             if forbid in vrl:
                 logger.warning(f"VRL validation failed: contains forbidden '{forbid}'")
@@ -222,6 +287,31 @@ Return ONLY the VRL code above adapted for the log."""
         if not re.search(r'\.class_uid\s*=\s*\d+', vrl):
             logger.warning("VRL validation failed: class_uid not properly set")
             return False
+
+        if sample_log:
+            try:
+                import subprocess, tempfile
+                prism_bin = "/mnt/work/projects/sih/prism/target/release/prism"
+                if os.path.exists(prism_bin):
+                    with tempfile.NamedTemporaryFile('w', suffix='.vrl', delete=False) as tf:
+                        tf.write(vrl)
+                        tmp_name = tf.name
+                    try:
+                        res = subprocess.run(
+                            [prism_bin, "--dry-run-vrl", tmp_name, "--payload", "-"],
+                            input=sample_log,
+                            capture_output=True,
+                            text=True,
+                            timeout=5
+                        )
+                        if res.returncode != 0:
+                            logger.warning(f"VRL dry-run validation failed: {res.stderr.strip()}")
+                            return False
+                    finally:
+                        if os.path.exists(tmp_name):
+                            os.remove(tmp_name)
+            except Exception as e:
+                logger.warning(f"VRL dry-run validation error: {e}")
             
         return True
     

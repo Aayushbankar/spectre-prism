@@ -233,7 +233,7 @@ export const CommandCenterView: React.FC<Props> = ({
             2 / 3 <span className="text-xs font-normal text-slate-400">Signed</span>
           </div>
           <div className="text-[10px] text-emerald-400 font-mono mt-1">
-            NTRO + CERT-In Cosigned
+            Quorum Cosigned
           </div>
         </div>
 
@@ -553,7 +553,7 @@ export const CommandCenterView: React.FC<Props> = ({
           <div className="grid grid-cols-3 gap-2 text-[10px] font-mono">
             <div className="p-2.5 rounded-xl bg-slate-900/80 border border-emerald-500/40 space-y-1">
               <div className="flex items-center justify-between text-emerald-400 font-bold">
-                <span>NTRO GATEWAY</span>
+                <span>SOC GATEWAY</span>
                 <CheckCircle2 className="w-3 h-3" />
               </div>
               <p className="text-slate-400">ed25519:7a4f91b...</p>
