@@ -2066,7 +2066,7 @@ dependencies = [
  "futures-task",
  "memchr",
  "pin-project-lite",
- "block",
+ "slab",
 ]
 
 [[package]]
@@ -2156,7 +2156,7 @@ dependencies = [
  "futures-sink",
  "http",
  "indexmap",
- "block",
+ "slab",
  "tokio",
  "tokio-util",
  "tracing",
@@ -3057,7 +3057,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lru-block"
+name = "lru-slab"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4050469837a6ff301cd14c1f8f24f88549e6d548f24f64e2148eb0f72cebc51f"
@@ -4282,7 +4282,7 @@ dependencies = [
  "bytes",
  "fastbloom",
  "getrandom 0.4.3",
- "lru-block",
+ "lru-slab",
  "rand 0.10.3",
  "rand_pcg",
  "ring",
@@ -4290,7 +4290,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "rustls-platform-verifier",
- "block",
+ "slab",
  "thiserror 2.0.20",
  "tinyvec",
  "tracing",
@@ -5185,7 +5185,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "sharded-block"
+name = "sharded-slab"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
@@ -5262,7 +5262,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ee5873ec9cce0195efcb7a4e9507a04cd49aec9c83d0389df45b1ef7ba2e649"
 
 [[package]]
-name = "block"
+name = "slab"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c790de23124f9ab44544d7ac05d60440adc586479ce501c1d6d7da3cd8c9cf5"
@@ -5911,7 +5911,7 @@ version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
 dependencies = [
- "sharded-block",
+ "sharded-slab",
  "thread_local",
  "tracing-core",
 ]
@@ -6334,7 +6334,7 @@ dependencies = [
  "js-sys",
  "parking_lot",
  "pin-utils",
- "block",
+ "slab",
  "wasm-bindgen",
 ]
 
