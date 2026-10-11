@@ -15,7 +15,7 @@ import subprocess
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-WORKSPACE = Path("/mnt/work/projects/sih/prism")
+WORKSPACE = Path(__file__).resolve().parent
 PRISM_BIN = WORKSPACE / "target/release/prism"
 PRISM_TUI_BIN = WORKSPACE / "target/release/prism-tui"
 VAULT_DIR = Path("/tmp/prism/vault")

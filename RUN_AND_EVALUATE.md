@@ -22,12 +22,12 @@ which nc || which netcat
 ollama list 2>/dev/null | head -5 || echo "Ollama not running - heuristic fallback will be used"
 
 # 5. Project built
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ls -la target/release/prism
 # Expected: binary exists ~15MB
 
 # 6. Python deps installed
-cd /mnt/work/projects/sih/prism/prism-brain
+cd "$(git rev-parse --show-toplevel)"/prism-brain
 pip list | grep -E "requests|watchdog|drain3|filelock|pyyaml|pytest"
 # Expected: all packages listed
 
@@ -36,7 +36,7 @@ pip list | grep -E "requests|watchdog|drain3|filelock|pyyaml|pytest"
 # ============================================================
 
 # Clean build to prove no hidden issues
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 cargo build --release -p prism 2>&1 | tail -10
 # Must show: "Finished `release` profile [optimized] target(s) in XX.XXs"
 
@@ -53,7 +53,7 @@ cargo test --lib 2>&1 | grep -E "(test result|running)"
 # Expected: 16 passed across prism-common, prism-core, prism-provenance
 
 # Python tests (all must pass)
-cd /mnt/work/projects/sih/prism/prism-brain
+cd "$(git rev-parse --show-toplevel)"/prism-brain
 python3 -m pytest tests/ -q 2>&1 | tail -3
 # Expected: "27 passed, 3 skipped" (bigdata GPU tests skipped without GPU)
 
@@ -62,7 +62,7 @@ python3 -m pytest tests/ -q 2>&1 | tail -3
 # ============================================================
 
 # Terminal 1: Start PRISM UDP listener
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 mkdir -p /tmp/prism_test/vault /tmp/prism_test/rules
 ./target/release/prism --udp-bind-addr 127.0.0.1:15514 --vault-dir /tmp/prism_test/vault --batch-size 10
 
@@ -92,7 +92,7 @@ ls -la /tmp/prism_test/vault/
 # SECTION 4: UNKNOWN LOG → DLQ ROUTING (PS: "Unknown logs quarantined")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism --udp-bind-addr 127.0.0.1:15515 --vault-dir /tmp/prism_test/vault --batch-size 10 &
 PRISM_PID=$!
 sleep 2
@@ -112,7 +112,7 @@ cat /tmp/prism_test/vault/dlq_*.log | head -3
 # SECTION 5: TCP INGEST TEST (PS: "TCP syslog support")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism --tcp-bind-addr 127.0.0.1:15516 --vault-dir /tmp/prism_test/vault --batch-size 10 &
 PRISM_PID=$!
 sleep 2
@@ -130,7 +130,7 @@ cat /tmp/prism_metrics.json | python3 -m json.tool
 # SECTION 6: HITL APPROVAL FLOW (PS: "Human-in-the-loop AI parser generation")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism/prism-brain
+cd "$(git rev-parse --show-toplevel)"/prism-brain
 
 # Submit a rule via Gatekeeper (auto dry-run validation)
 python3 -c "
@@ -187,7 +187,7 @@ for vf in vrl_files:
 # SECTION 7: VRL DRY-RUN VALIDATION (PS: "Safe hot-reload")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism --dry-run-vrl /tmp/prism_test/rules/*.vrl --payload 'date=2024-01-15 time=08:23:41 devname="FGT-DC-01" devid="FG100" logid="0000000013" type="traffic" subtype="forward" level="notice" srcip=192.168.1.5 dstip=8.8.8.8 srcport=54321 dstport=443 proto=6 action="accept" sentbyte=1024 rcvdbyte=2048'
 # Must output: Valid JSON with src_endpoint.ip=192.168.1.5, class_uid=4001
 
@@ -195,7 +195,7 @@ cd /mnt/work/projects/sih/prism
 # SECTION 8: OCSF OUTPUT VALIDATION (PS: "Universal OCSF taxonomy")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism/prism-brain
+cd "$(git rev-parse --show-toplevel)"/prism-brain
 python3 -c "
 import sys
 sys.path.insert(0, '.')
@@ -225,13 +225,13 @@ print('All 4 OCSF classes generate correct UIDs')
 # ============================================================
 
 # Terminal 1: Start PRISM with metrics
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism --udp-bind-addr 127.0.0.1:15517 --vault-dir /tmp/prism_test/vault --batch-size 100 &
 PRISM_PID=$!
 sleep 2
 
 # Terminal 2: Start AI brain (generates rules from DLQ)
-cd /mnt/work/projects/sih/prism/prism-brain
+cd "$(git rev-parse --show-toplevel)"/prism-brain
 python3 main.py &
 AI_PID=$!
 sleep 2
@@ -243,7 +243,7 @@ done
 sleep 3
 
 # Terminal 4: Launch TUI (will show Gatekeeper tab with pending rules)
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism-tui
 # Navigate: Tab → Gatekeeper tab
 # Should see: ⏳ PENDING rules with device type
@@ -256,7 +256,7 @@ kill $PRISM_PID $AI_PID 2>/dev/null
 # SECTION 10: PROVENANCE LEDGER (PS: "Immutable audit trail")
 # ============================================================
 
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./target/release/prism --udp-bind-addr 127.0.0.1:15518 --vault-dir /tmp/prism_test/vault --batch-size 2 &
 PRISM_PID=$!
 sleep 2
@@ -280,7 +280,7 @@ find /tmp/prism_test/vault -type f -name "*.parquet" | head -3
 # SECTION 11: E2E AUTOMATED TEST (all-in-one)
 # ============================================================
 
-cd /mnt/work/projects/sih/prism
+cd "$(git rev-parse --show-toplevel)"
 ./test_e2e.sh
 # Must show: "=== All Tests Passed ===" at end
 
@@ -310,7 +310,7 @@ cd /mnt/work/projects/sih/prism
 # QUICK SMOKE TEST (run this single command for full verify)
 # ============================================================
 
-cd /mnt/work/projects/sih/prism && \
+cd "$(git rev-parse --show-toplevel)" && \
 cargo test --lib 2>&1 | grep "test result" && \
 cd prism-brain && python3 -m pytest tests/ -q 2>&1 | tail -1 && \
 cd .. && ./test_e2e.sh 2>&1 | grep -E "(SUCCESS|FAILED|All Tests)"
@@ -337,7 +337,7 @@ watch -n 2 'cat /tmp/prism_test/vault/ledger.log'
 watch -n 2 'ls -la /tmp/prism_test/rules/'
 
 # Gatekeeper state
-cd /mnt/work/projects/sih/prism/prism-brain && python3 -c "
+cd "$(git rev-parse --show-toplevel)"/prism-brain && python3 -c "
 import sys; sys.path.insert(0, '.')
 from hitl.gatekeeper import create_gatekeeper
 gk = create_gatekeeper({'base_dir': '/tmp/prism_test', 'rules_dir': '/tmp/prism_test/rules'})

@@ -50,10 +50,11 @@ echo "--------------------"
 
 echo "[*] Simulating AI Pipeline (Triage -> Coder -> Gatekeeper)..."
 # We run the python script that executes the AI loop
-cat << 'EOF' > /tmp/run_ai.py
+REPO_ROOT="$(cd "$(dirname "$0")" && pwd)"
+cat << EOF > /tmp/run_ai.py
 import sys
 import os
-os.chdir('/mnt/work/projects/sih/prism')
+os.chdir("$REPO_ROOT")
 sys.path.insert(0, os.path.abspath('prism-brain'))
 from triage.triage import TriageEngine
 from coder.coder import VrlCoder

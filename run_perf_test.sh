@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Ensure we are in the right directory
-cd /mnt/work/projects/sih/prism
+cd "$(dirname "$0")"
 
 echo "Starting PRISM natively..."
 # Start prism, piping output to a log file
